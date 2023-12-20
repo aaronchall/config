@@ -1,0 +1,26 @@
+* config
+** TODOS:
+*** TODO factor gui.nix
+*** TODO add server config
+** config:
+- flake.nix
+  - x1
+    - x1.nix
+    - console.nix
+      - networks.nix - private
+      - colors.nix
+      - prompt.sh
+    - gui.nix
+      - colors.nix
+    - home.nix
+      - home console
+      - home gui
+  - server
+    - console.nix
+    - home.nix console semantic
+
+** Defunct
+- screensharing-hacks.nix
+- masterkubernetes.nix
+- nodekubernetes.nix
+- uwfssh
