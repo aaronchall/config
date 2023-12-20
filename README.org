@@ -1,26 +1,46 @@
 * config
+These are notes to myself, but might help others...
+(Edit this file with emacs!)
+
+** usage:
+
+For new machine update system.stateVersion and
+name the machine a'la x1 (in flake.nix and repo's x1.nix), give it hardware specific config
+from auto-generated hardware-configuration.nix and configuration.nix.
+
+~switch_config~ is aliased to something like ~sudo nixos-rebuild switch --flake ~/config/#x1~
+where ~x1~ is the name of the flake in flake.nix.
+
+Be sure to commit new files so flake can see them.
+
+
+
 ** TODOS:
-*** TODO factor gui.nix
+*** DONE factor gui.nix
 *** TODO add server config
 ** config:
-- flake.nix
-  - x1
-    - x1.nix
-    - console.nix
-      - networks.nix - private
-      - colors.nix
-      - prompt.sh
-    - gui.nix
-      - colors.nix
-    - home.nix
-      - home console
-      - home gui
+
+- flake.nix - top level entry point, has all computers config'd
+  - x1 - my laptop, uses the following nix files:
+    - x1.nix - everything specific to the machine, stuff like
+      - contents of old hardware-configuration.nix
+      - keyboard media key mappings with actkbd
+      - network device references from old configuration.nix
+      - other machine specific configuration like systemd job and experimental services
+    - console.nix - everything I would want on any nix console/bash shell
+      - networks.nix - private, see demonetworks.nix for example
+      - colors.nix - long story, but used in both console and gui
+      - prompt.sh - instead of multiline string, allows for syntax highlighting
+    - gui.nix - everything I would want on any gui machine, browsers, editors, etc.
+      - colors.nix - actually gave a pull request
+	with these to kitty: https://github.com/kovidgoyal/kitty-themes/pull/98
+    - home.nix - home-manager, dotfile kind of stuff,
+      some things are just better handled by home-manager anyways.
+      - home console - not broken down into these... yet.
+      - home gui - not broken down into...
   - server
     - console.nix
     - home.nix console semantic
-
 ** Defunct
-- screensharing-hacks.nix
-- masterkubernetes.nix
-- nodekubernetes.nix
-- uwfssh
+
+- screensharing-hacks.nix - no need to check these out unless you're trying to get screensharing to work with wayland
