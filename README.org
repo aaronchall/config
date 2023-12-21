@@ -27,7 +27,7 @@ Be sure to commit new files so flake can see them.
       - network device references from old configuration.nix
       - other machine specific configuration like systemd job and experimental services
     - console.nix - everything I would want on any nix console/bash shell
-      - networks.nix - private, see demonetworks.nix for example
+      - networks.nix - example file, actual details are uncommitted
       - colors.nix - long story, but used in both console and gui
       - prompt.sh - instead of multiline string, allows for syntax highlighting
     - gui.nix - everything I would want on any gui machine, browsers, editors, etc.

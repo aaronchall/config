@@ -2,7 +2,9 @@
 let 
   colors = import ./colors.nix;
   networks = import ./networks.nix;
+  fooooooooooooooooooooo = "barrrrrrrrrrrrrrrrrrrrrrrrrr";
 in {
+  nixpkgs.config.allowBroken = true;
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -286,7 +288,7 @@ in {
     clang
     gnumake
     (rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
-    (python310.withPackages (ps: with ps; [
+    (python311.withPackages (ps: with ps; [
       #stem # tor
       pillow
       types-pillow
@@ -305,6 +307,9 @@ in {
       cython
       wheel
       jupyterlab
+      flax
+      tensorflow
+      #tensorflow-datasets
     #   #jupyterlab_lsp # pypi says requires:
     #   #python-language-server # see https://pypi.org/project/python-language-server/ :
     #   #pyls-mypy
@@ -315,8 +320,7 @@ in {
       ipython
       scikitlearn
       sympy
-    #   requests
-    #   tornado
+      tornado
     #   flask
     #   django
     #   pympler
