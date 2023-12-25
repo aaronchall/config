@@ -1,7 +1,7 @@
 {
   inputs = { ## Three inputs to the flakes:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
-    nixpkgs-unstable.url = "nixpkgs/nixos-unstable"; 
+    nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager/release-23.11";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -9,11 +9,11 @@
   };
   outputs = {
       self, # the directory of this flake in the store
-      nixpkgs, 
-      nixpkgs-unstable, 
+      nixpkgs,
+      nixpkgs-unstable,
       home-manager,
-      ...}: 
-    let 
+      ...}:
+    let
       system = "x86_64-linux"; 
       overlay-unstable = final: prev: {
         unstable = import nixpkgs-unstable {
@@ -40,6 +40,48 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = false;
             home-manager.users.aaron = { imports = [ ./home.nix ]; };
+          }
+        ];
+    };
+      nixosConfigurations.nat = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [ # Six modules:
+          ({ config, pkgs, ... }: {
+              nixpkgs.overlays = [ overlay-unstable ];
+              environment.systemPackages = with pkgs; [
+                unstable.discord-canary
+              ];
+          })
+          ./console.nix
+          ./gui.nix
+          ./dad.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = false;
+            home-manager.users.aaron = { imports = [ ./home.nix ]; };
+            home-manager.users.nat = { imports = [ ./home.nix ]; };
+          }
+        ];
+    };
+      nixosConfigurations.dad = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [ # Six modules:
+          ({ config, pkgs, ... }: {
+              nixpkgs.overlays = [ overlay-unstable ];
+              environment.systemPackages = with pkgs; [
+                unstable.discord-canary
+              ];
+          })
+          ./console.nix
+          ./gui.nix
+          ./dad.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = false;
+            home-manager.users.aaron = { imports = [ ./home.nix ]; };
+            home-manager.users.steve = { imports = [ ./home.nix ]; };
           }
         ];
     };

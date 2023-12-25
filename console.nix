@@ -91,6 +91,8 @@ in {
     withNodeJs = true; # python3 true by default
     configure = {
       customRC = ''
+        scriptencoding utf-8
+        set encoding=utf-8
         syntax on
         filetype on
         set relativenumber
@@ -100,6 +102,9 @@ in {
         set hidden
         set ruler
         set colorcolumn=80
+        " view tabs and trailing spaces:
+        set list
+        set listchars=tab:»·,trail:·
         " below uses color 17 here: https://www.ditig.com/256-colors-cheat-sheet
         highlight ColorColumn ctermbg=NONE ctermfg=red 
         set backspace=indent,eol,start
@@ -116,7 +121,7 @@ in {
         augroup END
       '';
       packages.myVimPackage = with pkgs.vimPlugins; {
-        start = [ 
+        start = [
           vim-lsp # need LSP now? 
           YouCompleteMe elm-vim vim-nix haskell-vim 
           jedi-vim typescript-vim rust-vim vim-polyglot
@@ -208,16 +213,31 @@ in {
       grep -r $1 ~/config ;
     }
     find_file () {
-      find . -type f -name "$1"
+      find . -type f -name "$1" ;
     }
     find_dir () {
-      find . -type d -name "$1"
+      find . -type d -name "$1" ;
+    }
+    switch () { # usage: switch x1  *or* switch knode
+      sudo nixos-rebuild switch --flake ~/config#$1 ;
+    }
+    build () {
+      sudo nixos-rebuild build --flake ~/config#$1 ;
+    }
+    update () {
+      sudo nix flake update ~/config ;
+    }
+    rollback () {
+      sudo nixos-rebuild --rollback switch ;
+    }
+    cleanup () {
+      sudo nix-collect-garbage --delete-older-than 30d ;
     }
   '';
   # Firewall:
   networking.firewall.allowedTCPPorts = [ ];
   networking.firewall.allowedUDPPorts = [ ];
-  
+
   # virtualisation.docker.enable = true;
   virtualisation.podman.enable = true;
 
@@ -233,7 +253,7 @@ in {
     build_config = "cd ~/config && sudo nixos-rebuild build --flake ~/config/#x1 ; cd -";
     switch_config = "cd ~/config && sudo nixos-rebuild switch --flake ~/config/#x1 ; cd -";
     update_config = "cd ~/config && nix flake update ; cd -";
-    rollback_one_generation = "cd ~/config && sudo nixos-rebuild --rollback switch ; cd -";
+    rollback_one_generation = "sudo nixos-rebuild --rollback switch";
     collect_all_garbage = "sudo nix-collect-garbage -d";
     collect_some_garbage = "sudo nix-collect-garbage";
     follow_all_user_logging = "journalctl -f";
@@ -258,7 +278,7 @@ in {
     file # info on files
     bat # better cat
     eza # ls improvement, written in rust
-    htop # better top
+    #htop # better top
     btop # best top
     tmux # terminal multiplexer
     rustscan # scan ports fast https://rustscan.github.io/RustScan/
