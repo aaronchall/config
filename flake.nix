@@ -1,9 +1,9 @@
 {
   inputs = { ## Three inputs to the flakes:
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-23.11";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -25,10 +25,18 @@
       nixosConfigurations.x1 = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [ # Six modules:
-          ({ config, pkgs, ... }: {
-              nixpkgs.overlays = [ overlay-unstable ];
+          ({ pkgs, ... }: {
+              nixpkgs.overlays = [
+                overlay-unstable
+              ];
+              services.ollama = {
+                enable = true;
+                package = pkgs.unstable.ollama;
+              };
               environment.systemPackages = with pkgs; [
-                unstable.discord-canary
+                #unstable.firefox
+                unstable.discord
+                unstable.discord-canary # This has screensharing on wayland!
                 # see also https://www.reddit.com/r/NixOS/comments/svm500/nixpkgs_overlay_to_have_the_latest_version_of/
               ];
           })
@@ -42,7 +50,7 @@
             home-manager.users.aaron = { imports = [ ./home.nix ]; };
           }
         ];
-    };
+      };
       nixosConfigurations.nat = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [ # Six modules:
@@ -63,7 +71,7 @@
             home-manager.users.nat = { imports = [ ./home.nix ]; };
           }
         ];
-    };
+      };
       nixosConfigurations.dad = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [ # Six modules:
@@ -84,7 +92,7 @@
             home-manager.users.steve = { imports = [ ./home.nix ]; };
           }
         ];
-    };
+      };
       nixosConfigurations.server = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
@@ -97,7 +105,7 @@
             home-manager.users.aaron = { imports = [ ./home.nix ]; };
           }
         ];
-    };
+      };
   };
 }
 

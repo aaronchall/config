@@ -34,4 +34,5 @@
       forcats #
       lubridate # dates and times
       magrittr # pipe %>% operator for chaining
+      lpSolve # for Advanced Algorithms class, linear programming
     ]

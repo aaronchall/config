@@ -53,7 +53,7 @@ in
   ## htmlize
   ## evil mode 
   home.file.".emacs.d/init.el".text = ''
-    ;; starting from from very small .emacs file
+    ;; starting from a very small .emacs file
     ;; use vim keybindings, see https://www.emacswiki.org/emacs/Evil
     (require 'evil) ;; have to have installed first...
     ;;(require 'org-babel)
@@ -66,8 +66,10 @@ in
        (gnuplot . t)
        (C . t)
        (java . t)
-       ))
-    
+       (dot . t)
+       (sql . t)
+      )
+    )
     (evil-set-undo-system 'undo-redo) ;; XXX XXX will this work?
     ;;(require 'adwaita-dark-theme)
     ;;(load-theme 'adwaita-dark)
@@ -80,7 +82,6 @@ in
     ;;(doom-themes-neotree-config)
     ;;(doom-themes-org-config)
     ;;(doom-themes-visual-bell-config)
-
     (require 'company)
     (add-hook 'after-init-hook 'global-company-mode)
     (add-hook 'org-mode-hook (lambda () (progn
@@ -109,6 +110,8 @@ in
     (setq display-line-numbers-type 'relative)
 
     (custom-set-variables
+     '(org-confirm-babel-evaluate nil)
+     '(org-latex-pdf-process (list "pdflatex --shell-escape -pdf %f"))
      '(custom-enabled-themes '(deeper-blue))
      ;;'(custom-safe-themes
        ;; adwaita-dark:
@@ -135,7 +138,7 @@ in
     (add-to-list 'default-frame-alist '(font . "Fira Code"))
     '';
   home.file.".ssh/config".text = ''
-    Host cs-ssh
+    Host cs-ssh cs
         Hostname cs-ssh.uwf.edu
         User ach22
 
@@ -195,7 +198,7 @@ in
     gaps inner 5
     smart_gaps on
     # super-c screenshots, puts png in ~/Pictures
-    bindsym $mod+c exec grim  -g "$(slurp)" ~/Pictures/$(date +'%H:%M:%S.png')
+    bindsym $mod+c exec grim  -g "$(slurp)" ~/Pictures/$(date -Iseconds).png
     
     ### Output configuration
     #
@@ -210,6 +213,8 @@ in
     #   output HDMI-A-1 resolution 1920x1080 position 1920,0
     #
     # You can get the names of your outputs by running: swaymsg -t get_outputs
+    output eDP-1 pos 0 0 
+    output DP-3 pos 1920 0
     
     ### Idle configuration
     #
@@ -225,10 +230,19 @@ in
     # resumed. It will also lock your screen before your computer goes to sleep.
     
     ### Input configuration
-    # You can get the names of your inputs by running: swaymsg -t get_inputs
+    # You can get the names of your inputs by running:   swaymsg -t get_inputs
     # Read `man 5 sway-input` for more information about this section.
-    input "1386:20606:Wacom_Pen_and_multitouch_sensor_Finger" map_to_output eDP-1
-    input "1386:20606:Wacom_Pen_and_multitouch_sensor_Pen" map_to_output eDP-1
+    # was:
+    #input "1386:20606:Wacom_Pen_and_multitouch_sensor_Finger" map_to_output eDP-1
+    #input "1386:20606:Wacom_Pen_and_multitouch_sensor_Pen" map_to_output eDP-1
+    # now:
+    input "1386:21113:Wacom_HID_5279_Finger" map_to_output eDP-1
+    input "1386:21113:Wacom_HID_5279_Pen" map_to_output eDP-1
+
+    # attempt to get both left and right shift recognized as Shift
+    input "type:keyboard" {
+      xkb_options "shift:both_shiftlock"
+    }
     
     ### Key bindings
     #
@@ -254,7 +268,7 @@ in
         bindsym $mod+Shift+c reload
     
         # Exit sway (logs you out of your Wayland session)
-        bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Doyou really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+        bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
     #
     # Moving around:
     #
@@ -332,7 +346,7 @@ in
         # Make the current focus fullscreen
         bindsym $mod+f fullscreen
     
-        # Toggle the current focus between tiling and floating mode
+        # Toggle the current focus between tiling and floating mode (right shift?)
         bindsym $mod+Shift+space floating toggle
     
         # Swap focus between the tiling area and the floating area
@@ -352,7 +366,7 @@ in
         # Show the next scratchpad window or hide the focused scratchpad window.
         # If there are multiple scratchpad windows, this command cycles through them.
         bindsym $mod+minus scratchpad show
-        # use super-shift-space (floating toggle) to retile the window.
+        # use super-shift-space (floating toggle) to retile the window. (right shift?)
     #
     # Resizing containers:
     #

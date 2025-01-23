@@ -1,14 +1,15 @@
-{pkgs, ...}:
+{pkgs, lib, ...}:
 let 
   colors = import ./colors.nix;
   networks = import ./networks.nix;
-  fooooooooooooooooooooo = "barrrrrrrrrrrrrrrrrrrrrrrrrr";
 in {
   nixpkgs.config.allowBroken = true;
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  #boot.kernelPackages = pkgs.linuxPackages_6_7;
+  # TODO switch back later:
+  #boot.kernelPackages = pkgs.linuxPackages_latest;
   # below won't boot :(
   #boot.kernelPackages = pkgs.linuxPackages-rt_latest;
   # why do these feel redundant?
@@ -32,22 +33,45 @@ in {
   console = { # sets /etc/vconsole.conf
     # see `ls /etc/static/kbd/consolefonts/ | grep .psfu.gz` for fonts
     # samples: https://adeverteuil.github.io/linux-console-fonts-screenshots/
-    font = "Lat2-Terminus16"; 
+    font = "Lat2-Terminus16";
     # or maybe see kmscon? https://search.nixos.org/options?query=kmscon
     keyMap = "us";
-    colors = with colors; 
+    colors = with colors;
       [ black red green yellow blue magenta cyan white 
         brightblack brightred brightgreen brightyellow brightblue
         brightmagenta brightcyan brightwhite ];
   };
 
   # VM - grep for virt to find all relevant entries
-  virtualisation.libvirtd.enable = true;
-  programs.dconf.enable = true; # VM too, see wiki entry on virt-manager
+  #virtualisation = {
+    #qemu.drives = {
+    #  nixosvm = {
+    #    name = "nixosvm";
+    #    # the file image used for this drive
+    #    file = "nixos-minimal-23.11.4976.79baff8812a0-x86_64-linux.iso";
+    #    driveExtraOpts = {}; # extra options passed to drive flag
+    #    deviceExtraOpts = {}; # Extra options passed to device flag
+    #  };
+    #};
+   # virtualbox.host = {
+   #   enable = true;
+   #   enableExtensionPack = true;
+   # };
+   # libvirtd.enable = true;
+  #};
+
+  users.extraGroups.bvoxusers.members = [ "aaron" ];
+  # virtualisation.libvirtd.enable = true;# sudo virsh net-start default
+  # users.users.user = { # for build-vm?
+  #   group = [ "wheel" ];
+  #   isSystemUser = true;
+  #   initialPassword = "pw";
+  # };
 
   # run the emacs server daemon so starting emacs (as a client) is super fast:
   services.emacs.enable = true;
   # services.emacs.package = pkgs.emacs29-pgtk; # alpha-background, finally
+  # oh no, alpha-background seems broken again!
   services.emacs.package = (with pkgs; (
     (emacsPackagesFor emacs29-pgtk).emacsWithPackages (epkgs: with epkgs; [
         evil
@@ -56,6 +80,7 @@ in {
         neotree
         ob-rust
         ob-elm
+        treesit-grammars.with-all-grammars
         company
         # company-stan
         company-math
@@ -79,9 +104,14 @@ in {
         adwaita-dark-theme
         gnuplot
         gnuplot-mode
+        lsp-pyright
       ]
     )
   ));
+  programs = {
+    mtr.enable = true;
+    tmux.enable = true;
+  };
   # use neovim for lsp support
   programs.neovim = {
     enable = true;
@@ -90,7 +120,7 @@ in {
     defaultEditor = true;
     withNodeJs = true; # python3 true by default
     configure = {
-      customRC = ''
+      customRC = /* vimrc */ ''
         scriptencoding utf-8
         set encoding=utf-8
         syntax on
@@ -119,12 +149,17 @@ in {
           autocmd!
           autocmd VimEnter * :Vexplore
         augroup END
+        command! -nargs=0 Diff w !diff % -
+        lua require('lspconfig').pyright.setup{}
       '';
       packages.myVimPackage = with pkgs.vimPlugins; {
         start = [
-          vim-lsp # need LSP now? 
-          YouCompleteMe elm-vim vim-nix haskell-vim 
-          jedi-vim typescript-vim rust-vim vim-polyglot
+          #vim-lsp # need LSP now? 
+          #YouCompleteMe elm-vim vim-nix haskell-vim 
+          #jedi-vim typescript-vim rust-vim vim-polyglot
+          nvim-treesitter.withAllGrammars
+          coc-pyright # completion and uses typescript - Python
+          nvim-lspconfig # spelling?
         ];
       };
     };
@@ -149,7 +184,7 @@ in {
   # Bash config:
   # https://www.gnu.org/software/bash/manual/bash.html
   programs.bash.promptInit = builtins.readFile ./prompt.sh;
-  programs.bash.interactiveShellInit = ''
+  programs.bash.interactiveShellInit = /* bash */ ''
     mount_android () {
     mkdir -p ~/androidmount
     cat <<DOC
@@ -192,7 +227,6 @@ in {
     }
     ___follow_site_check_log() { journalctl --user -fu site_check ; }
     restart_wpa() { systemctl restart wpa_supplicant-wlp0s20f3.service ; }
-    list_paths() { echo $PATH | tr : "\n" ; }
     ___set_terminal_name() { printf '\033]0;%s\007' "$*" ; }
     fix_touchpad() { sudo modprobe -r psmouse && sudo modprobe psmouse ; }
     store_location () { readlink $(which $1) ; }
@@ -218,16 +252,50 @@ in {
     find_dir () {
       find . -type d -name "$1" ;
     }
-    switch () { # usage: switch x1  *or* switch knode
-      sudo nixos-rebuild switch --flake ~/config#$1 ;
+    # PATH manipulation convenience functions:
+    list_paths() {
+      echo $PATH | tr : "\n" ; 
     }
-    build () {
-      sudo nixos-rebuild build --flake ~/config#$1 ;
+    # These are from Linux From Scratch http://www.linuxfromscratch.org/blfs/view/6.3/postlfs/profile.html
+    # Functions to help us manage paths.  Second argument is the name of the
+    # path variable to be modified (default: PATH) $$'s are doubled up to escape from nix:
+    pathremove () {
+        local IFS=':'
+        local NEWPATH
+        local DIR
+        local PATHVARIABLE=$${2:-PATH}
+        for DIR in $${!PATHVARIABLE} ; do
+            if [ "$DIR" != "$1" ] ; then
+                NEWPATH=$${NEWPATH:+$$NEWPATH:}$$DIR
+            fi
+        done
+        export $$PATHVARIABLE="$$NEWPATH"
+    }
+    pathprepend () {
+        pathremove $$1 $$2
+        local PATHVARIABLE=$${2:-PATH}
+        export $$PATHVARIABLE="$$1$${!PATHVARIABLE:+:$${!PATHVARIABLE}}"
+    }
+    pathappend () {
+        pathremove $$1 $$2
+        local PATHVARIABLE=$${2:-PATH}
+        export $$PATHVARIABLE="$${!PATHVARIABLE:+$${!PATHVARIABLE}:}$$1"
+    }
+
+    # Nix OS convenience functions:
+    switch_old () { # usage: switch x1  *or* switch knode
+      sudo nixos-rebuild switch -L --flake ~/config#$1 ;
+    }
+    switch () { # update and switch - this uses hostname for flake.
+      nh os switch --update ~/config ;
+    }
+    build_old () {
+      sudo nixos-rebuild build -L --flake ~/config#$1 ;
     }
     update () {
-      sudo nix flake update ~/config ;
+      echo "used to run 'nix flake update ~/config', now just 'switch'" ;
     }
-    rollback () {
+    rollback () { #TODO find nh version of this?
       sudo nixos-rebuild --rollback switch ;
     }
     cleanup () {
@@ -240,6 +308,10 @@ in {
 
   # virtualisation.docker.enable = true;
   virtualisation.podman.enable = true;
+
+ # services.ollama = {
+ #   enable = true;
+ # };
 
   nixpkgs.config.allowUnfree = true;
   environment.shellAliases = {
@@ -261,6 +333,9 @@ in {
     follow_wpa_log = "journalctl -fu wpa.supplicant.service";
   };
   environment.systemPackages = with pkgs; [
+    nh # "nix helper" features for builds like trees etc
+    mtr
+    nix-output-monitor
     acpi # battery info, thermals, ac adapter
     lm_sensors # required by temperature block for i3status-rs
     dmidecode # determine memory configuration
@@ -286,7 +361,10 @@ in {
     fwts # Firmware Test Suite
     wget # e.g. wget -c http://example.com/bigfile.tar.gz
     lynx # terminal web browser
+    w3m # another terminal web browser - nixos-help uses, so installing
     ispell # interactive spell-checking program for Unix (emacs)
+    #librsvg # A small library to render SVG images to Cairo surfaces (using for svg in emacs)
+    inkscape # for svg emacs... sigh...
     man
     man-pages
     pinfo # browse info pages with pinfo 
@@ -299,52 +377,74 @@ in {
     cowsay
     # Programming languages and related utils
     entr # run arbitrary commands when files change
-    jdk8
+    sbcl
+    rlwrap
+    # jdk8
+    jdk21
+    #qemu-utils
     # jdk17
     valgrind
-    gcc
+    #gcc
     gdb
     openmpi
-    clang
+    clang # conflicts with gcc...
     gnumake
-    (rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
-    (python311.withPackages (ps: with ps; [
+    rlwrap
+    oracle-instantclient
+    sbcl
+    spark
+    sbt
+    #hadoop # I think this is provided by spark because collisions
+    pandoc
+    #(rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
+    pyright
+    (python3Full.withPackages (ps: with ps; [
       #stem # tor
-      pillow
-      types-pillow
+      #python-sat # commented to demo
+#      jedi-language-server
+#      pycosat
+#      pillow
+#      types-pillow
       requests
-      types-requests
-      beautifulsoup4
-      guppy3 # get heap/memory layout info
-      pip
-      numpy
-      numpy-stl # stereolithography
-      scipy
-      mypy
-      flake8
-      pytest
-      coverage
-      cython
-      wheel
-      jupyterlab
-      flax
-      tensorflow
-      #tensorflow-datasets
-    #   #jupyterlab_lsp # pypi says requires:
-    #   #python-language-server # see https://pypi.org/project/python-language-server/ :
-    #   #pyls-mypy
-    #   #pyls-isort
-    #   #pyls-black
+#      types-requests
+#      beautifulsoup4
+#      guppy3 # get heap/memory layout info
+#      pip
+#      numpy
+#      numpy-stl # stereolithography
+#      scipy
+#      mypy
+#      flake8
+#      pytest
+#      coverage
+#      cython
+#      wheel
+#      jupyterlab
+#      flax
+#      pyspark
+#      networkx
+#      pygraphviz
+#      pygame
+#      #tensorflow
+#      # tensorflow-datasets
+#      #keras
+#      # torchaudio
+     # pyright # for lsp in neovim
+#    #   #jupyterlab_lsp # pypi says requires:
+#    #   #python-language-server # see https://pypi.org/project/python-language-server/ :
+#    #   #pyls-mypy
+#    #   #pyls-isort
+#    #   #pyls-black
       pandas
       statsmodels
-      ipython
+      #ipython
       scikitlearn
-      sympy
-      tornado
-    #   flask
-    #   django
-    #   pympler
-    #   pyqtgraph
+#      sympy
+#    #tornado
+#    #   flask
+#    #   django
+#    #   pympler
+#    #   pyqtgraph
     ]))
     (haskellPackages.ghcWithPackages (pkgs: with pkgs; [
       cabal-install
@@ -365,25 +465,37 @@ in {
       #ihaskell # maybe { allowBroken = true; }
       Euterpea
     ]))
+    go
     rustc
     cargo
     rustfmt
     nodejs
     deno
-  ] ++ (with nodePackages; [
+  ] ++ (with elmPackages; [
+    elm
+    #elm-format
+    elm-analyse # lint?
+    elm-coverage
+    elm-test
+    elm-review
+    elm-language-server
+    elm-optimize-level-2
+    elm-live # live reload
+  ]) ++ (with nodePackages; [
     npm
     typescript
     typescript-language-server
     ts-node
     #create-next-app
     #react-tools
-    yarn
+    #yarn # TODO - do I need this for hadoop or does hadoop supply its own?
   ]) ++ [
     # do I need these?: 
     kubectl # kubernetes 
-    docker # why?
-    podman # replaces docker (why ?)
+    #docker # why?
+    #podman # replaces docker (why ?) do I need this in addition to enable above?
     openshift
-    minishift
+    #minishift # discontinued upstream, use crc instead
+    crc # manage local OpenShift 4.x cluster or Podman VM optimized for testing and development
   ];
 }

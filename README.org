@@ -1,4 +1,6 @@
+
 * config
+See this repo here: https://github.com/aaronchall/config
 These are notes to myself, but might help others...
 (Edit this file with emacs!)
 
@@ -8,15 +10,15 @@ For new machine update system.stateVersion and
 name the machine a'la x1 (in flake.nix and repo's x1.nix), give it hardware specific config
 from auto-generated hardware-configuration.nix and configuration.nix.
 
-~switch_config~ is aliased to something like ~sudo nixos-rebuild switch --flake ~/config/#x1~
+~switch_config~ was aliased to something like ~sudo nixos-rebuild switch --flake ~/config/#x1~
 where ~x1~ is the name of the flake in flake.nix.
+Now we have ~switch~ which is a function 
+that does ~nh os switch ~/config~ and uses the hostname as the flake output.
 
 Be sure to commit new files so flake can see them.
 
 
 
-** TODOS:
-*** TODO add server config
 ** config:
 
 - flake.nix - top level entry point, has all computers config'd
@@ -39,6 +41,8 @@ Be sure to commit new files so flake can see them.
   - server
     - console.nix
     - home.nix console semantic
+** TODOS:
+*** TODO add server config
 ** Defunct
 
 - screensharing-hacks.nix - no need to check these out unless you're trying to get screensharing to work with wayland

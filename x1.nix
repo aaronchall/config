@@ -69,7 +69,7 @@
     timerConfig.OnCalendar = "minutely";
   };
   services.k3s = {
-    enable = true;
+    enable = false;#true;
     # chmod?
     # role = "server";
     /* server by default, runs workloads as agent too 
@@ -80,7 +80,7 @@
     Configure serverAddr to join an already-initialized HA cluster.
     If it’s an agent serverAddr is required.
     */
-    clusterInit = true;
+    #clusterInit = true;
   };
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

@@ -1,12 +1,13 @@
 { config, pkgs, ... }:
 let
   colors = import ./colors.nix;
-in 
+in
 {
   #imports = [ 
     # don't want screensharing hacks on right now:
     #./screensharing-hacks.nix
   #];
+  # TODO re-enable for screensharing
   boot.kernelModules = [ "v4l2loopback" ];
   boot.extraModulePackages = with config.boot.kernelPackages; [
     v4l2loopback
@@ -14,10 +15,11 @@ in
   boot.extraModprobeConfig = ''
     options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
   '';
- 
+
+  programs.virt-manager.enable = true;
   programs.sway.enable = true;
   programs.chromium = {
-    enable = true;
+    enable = true; # chromium policies, not install...
     extensions = [ # list of plugin IDs.
       # see ID in url of extensions on chrome web store page
       "cjpalhdlnbpafiamejdnhcphjbkeiagm" # ublock origin
@@ -39,7 +41,7 @@ in
 
     [icons]
     icons = "awesome6"
-    
+
     [[block]]
     block = "sound"
     step_width = 1
@@ -60,17 +62,17 @@ in
     alert = 20.0
     format = "$icon $available "
     format_alt = "disk available: $available / $total"
-    
+
     [[block]]
     block = "memory"
     format = "$icon $mem_used ($mem_used_percents.eng(w:1))"
     format_alt = "$icon_swap $swap_free.eng(w:3,u:B,p:M)/$swap_total.eng(w:3,u:B,p:M)($swap_used_percents.eng(w:2))"
-    
+
     [[block]]
     block = "cpu"
     interval = 1
     format = "$icon $barchart $utilization $frequency"
-    
+
     [[block]]
     block = "load"
     interval = 1
@@ -81,12 +83,12 @@ in
     block = "temperature"
     scale = "fahrenheit"
     format = "$average avg, $max max"
-        
+
     [[block]]
     block = "time"
     interval = 1
     format = " $timestamp.datetime(f:'%a %Y/%m/%d %T') "
-    
+
     [[block]]
     block = "battery"
     format = "$icon $percentage $time $power"
@@ -104,7 +106,7 @@ in
   ## TODO Factor into printing.nix:
   # Below enables printing (CUPS), print drivers (Dell), 
   services.printing = {
-    enable = true;
+    enable = false;
     drivers = [ pkgs.gutenprint ];
   };
   # check out systemd print manager?
@@ -114,14 +116,14 @@ in
     enable = true;
   # Important to resolve .local domains of printers, otherwise you get an error
   # like  "Impossible to connect to XXX.local: Name or service not known"
-    nssmdns = true;
+    nssmdns4 = true;
   };
 
   ## TODO Factor into pipewire.nix?
   # enable real-time scheduling priority for processes like pulseaudio:
   security.rtkit.enable = true; # Pipewire uses this, required for VMWare Horizon 
   security.polkit.enable = true; # allows OBS to use v4l2loopback
-  services.pipewire = {
+  services.pipewire = { # required by wayland for audio ?
     enable = true;
     alsa.enable = true;
     pulse.enable = true;
@@ -132,7 +134,7 @@ in
   #### User and Environment Setup
   environment.shellAliases = {
     start_sway = "exec sway";
-    sway_get_outputs = "swaymsg -t get_outputs";
+    list_sway_get_outputs = "swaymsg -t get_outputs";
     ssh = "kitty +kitten ssh"; # documented in kitty docs
     restart_pipewire = "systemctl --user restart pipewire";
     # see https://prabuselva.github.io/linux/hacks/ffmpeg-webcam-streaming/
@@ -149,14 +151,15 @@ in
   };
   environment.systemPackages = with pkgs; [
     (rstudioWrapper.override { packages = import ./RPackages.nix {inherit pkgs; }; })
+    # pulseaudioFull # for pactl list clients etc... # commenting for collision, supposed to use wpctl status or pw-cli ls or pw-dump
     jmtpfs # mount android - mkdir mountpoint ; jmtpfs mountpoint ; fusermount -u # to unmount
-    virt-manager # vm manager, gui for libvirt, kvm
+    #virt-manager # vm manager, gui for libvirt, kvm
     hplipWithPlugin # to scan, in new dir, hp-scan each page, 
     img2pdf #         then:    img2pdf *.png -o outputname.pdf
-    gnome.cheese # webcam app
+    cheese # webcam app
     # gphoto2 # camera software applications (unused?)
     evince # pdf reader
-    zathura # pdf reader (supposedly better) vim keybindings, :open to start
+    zathura # pdf reader (supposedly better) vim keybindings, :open, Ctrl-R inverts colors
     zotero # citation store and manager
     grim slurp # screenshot with Super-c - puts .png in /tmp/
     wl-clipboard # clipboard functionality
@@ -168,19 +171,23 @@ in
     v4l-utils # ?
     mpv # minimal video viewer
     mpvpaper # video wallpaper! but hasn't got ffmpeg with v4l2.
-    youtube-dl
+    #youtube-dl
+    yt-dlp
     # carla # GUI maybe manages wireplumber via Jack? never got it to work.
     geteltorito # extract img for thumbdrive from thinkpad iso's (for CDs)
-    xorg.xev
+    wev # wayland event viewer - was like xorg.xev
     xorg.xmodmap
     irssi # terminal irc client
-    dolphin # GUI file browser
+    #dolphin # GUI file browser
+    #kdePackages.kio-extras # libs for thumbnails in dolphin
+    kdePackages.dolphin
     i3status-rust # status bar for sway!
     kdenlive # video editing/processing GUI
     ffmpeg-full # video processing on command line
     helvum # manages wireplumber (pipewire)
-    easyeffects
+    #pw-viz # another wireplubmer/pipewire manager - build fails
     qpwgraph # PipeWire Graph Qt GUI https://gitlab.freedesktop.org/rncbc/qpwgraph
+    easyeffects
     jamesdsp # An audio effect processor for PipeWire clients
     noisetorch # Virtual microphone device with noise supression for PulseAudio
     feh # originally used to set background - can also view images from startup console
@@ -191,7 +198,8 @@ in
     texlive.combined.scheme-full # tex - for latex # see https://nixos.wiki/wiki/TexLive
     graphviz
     gnuplot
-    openra # Red Alert game!
+    # Games:
+    # openra # Red Alert game - disabled until dotnet upgraded
     oh-my-git # An interactive Git learning game
     mindustry # sandbox tower defense game
     libremines # minesweeper game
@@ -203,8 +211,10 @@ in
     #factorio # build and maintain factories # if fails, see instructions when fails
     dwarf-fortress # 
     pioneer # space adventure game set in the Milky Way galaxy at the turn of the 31st century
+    mame # arcade emulator
     snes9x-gtk
     zsnes
+    # End of games - probably should move to another module.
     kitty
     vmware-horizon-client # used to use overlay until got merged
     libv4l
@@ -213,7 +223,7 @@ in
     wacomtablet
     libwacom
     #fbreader
-    chromium
+    chromium # (not redundant to enable policies)
     firefox
     fstl # fast stl viewer (gui program, 3d printing files)
     k4dirstat
@@ -221,7 +231,7 @@ in
   nixpkgs.overlays = with pkgs; [
     (self: super: {
       mpv-unwrapped = super.mpv-unwrapped.override {
-        ffmpeg = ffmpeg_5-full;
+        ffmpeg = ffmpeg-full;
       };
     })
     /*(self: super: { # avoid error when trying to view youtube videos?
