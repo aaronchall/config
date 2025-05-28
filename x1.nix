@@ -17,6 +17,7 @@
   swapDevices = [
     { device = "/dev/disk/by-uuid/e55223ae-0e5c-4a4a-97e1-2ea4ac309d36"; }
   ];
+  #TODO review, CPU always low, maybe I can get better perf when plugged in?
   powerManagement.cpuFreqGovernor = lib.mkDefault "powersave";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   #networking.interfaces.enp0s31f6.useDHCP = true; # old laptop
@@ -43,31 +44,42 @@
     ];
   };
   # TODO consider factoring out to sitecheck.nix file?
-  #### Services/Jobs
+  #### systemd Services/Jobs
   # example here: https://discourse.nixos.org/t/syncthing-systemd-user-service/11199/6
   # verify running with `systemctl list-timers --user`
+  # be sure to run below when adding new units to get the daemon to pick them up:
+  # systemctl --user daemon-reload
+  # systemctl --user <start/status> <service_name>
   systemd.user.services.site_check = {
     description = "Notify user if aaronhall.dev is down.";
-    wantedBy = [ "default.target" "graphical-session.target" ];
-    serviceConfig = {
-      Type = "simple";
-    };
-    path = with pkgs; [ 
-      libnotify
-      curl
-    ];
+    wantedBy = [ "graphical-session.target" ];
+    serviceConfig = {Type = "simple";};
+    path = with pkgs; [libnotify curl];
     script = ''
       curl --silent --show-error https://aaronhall.dev || \
         notify-send -t 57000 -c 'network' 'Site Down' \
         'aaronhall.dev is down!'
         # '<a href="https://aaronhall.dev">aaronhall.dev</a> is down!'
     ''; # TODO wayland notification not parsing html anchor tag
+    startAt = "minutely"; # this makes a timer similar to below commented one:
   };
-  systemd.user.timers.site_check = {
-    wantedBy = [ "default.target" ];
-    partOf = [ "site_check.service" ];
-    timerConfig.OnCalendar = "minutely";
+  #systemd.user.timers.site_check = {
+  #  wantedBy = [ "default.target" ];
+  #  partOf = [ "site_check.service" ];
+  #  timerConfig.OnCalendar = "minutely";
+  #};
+  systemd.user.services.check_desktop = { 
+    description = "Check desktop";
+    wantedBy = [ "graphical-session.target" ];
+    serviceConfig = {Type = "simple";};
+    path = with pkgs; [libnotify];
+    script = ''
+      notify-send -t 57000 -c 'presence' 'Check it!' 'Check desktop!'
+    '';
+    # https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html
+    startAt = "Mon..Fri 09:00..17:00/5"; # creates a .timer for the service
   };
+  #### Kubernetes stuff:
   services.k3s = {
     enable = false;#true;
     # chmod?

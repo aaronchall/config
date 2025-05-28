@@ -1,6 +1,6 @@
 {config, pkgs, stdenv, lib, ...}:
 let
-    colors = import ./colors.nix;
+    colors = import ./colors.nix; # want to use in emacs, not used yet.
 in 
 {
   # see https://nix-community.github.io/home-manager/index.html#sec-usage-configuration
@@ -9,12 +9,13 @@ in
   # Home Manager Config goes here!
   # I'm going to mostly deal with dotfile stuff here.
   # gtk.theme.package = "adwaita-dark";
-  programs.git = {
+  programs.git = { # like setting up ~/.gitconfig file for your user:
     enable = true;
     userName = "Aaron Hall";
     userEmail = "aaronchall@yahoo.com";
   };
-  home.file.".config/git/ignore".text = ''
+  # setting up git ignore file for user:
+  home.file.".config/git/ignore".text = /* gitignore */ ''
     [._].swp
     result
     \#*\#
@@ -27,14 +28,13 @@ in
       obs-pipewire-audio-capture
     ];
   };
-  home.file.".config/zathura/zathura.rc".text = ''
+  home.file.".config/zathura/zathura.rc".text = /* zathurarc */ ''
     set sandbox none
     set statusbar-h-padding 0
     set statusbar-v-padding 0
     set page-padding 1
     set selection-clipboard clipboard
     set recolor true
-    
     map u scroll half-up
     map d scroll half-down
     map r reload
@@ -44,7 +44,6 @@ in
     map ii recolor
     map q quit
     map g goto top
-    
     set font "monospace 11"
   '';
   ## load-library - M-x loa-l
@@ -52,7 +51,7 @@ in
   ## org-tempo ;; templates for org source 
   ## htmlize
   ## evil mode 
-  home.file.".emacs.d/init.el".text = ''
+  home.file.".emacs.d/init.el".text = /* lisp */''
     ;; starting from a very small .emacs file
     ;; use vim keybindings, see https://www.emacswiki.org/emacs/Evil
     (require 'evil) ;; have to have installed first...
@@ -68,37 +67,37 @@ in
        (java . t)
        (dot . t)
        (sql . t)
+       (elm . t)
+       (haskell . t)
       )
     )
     (evil-set-undo-system 'undo-redo) ;; XXX XXX will this work?
-    ;;(require 'adwaita-dark-theme)
-    ;;(load-theme 'adwaita-dark)
     ;;(require 'powerline) ;; see https://www.youtube.com/watch?v=kAA37BR2B1Y 26:00ish for moar...
-    ;;(require 'doom-themes)
-    ;;(require 'doom-modeline) ;; probably conflicts with above...
-    ;;(doom-modeline-mode 1)
-    ;;(load-theme 'doom-solarized-dark)
-    ;;(load-theme 'doom-acario-dark)
-    ;;(doom-themes-neotree-config)
-    ;;(doom-themes-org-config)
-    ;;(doom-themes-visual-bell-config)
-    (require 'company)
     (add-hook 'after-init-hook 'global-company-mode)
     (add-hook 'org-mode-hook (lambda () (progn
       (require 'ox-reveal)
       (require 'org-tempo)
       (require 'htmlize)
     )))
+    ;;(add-hook 'python-ts-mode-hook #'tree-sitter-hl-mode)
+    (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(typescript-mode . typescript-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(css-mode . css-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(json-mode . json-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(c-mode . c-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(bash-mode . bash-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(html-mode . html-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(yaml-mode . yaml-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(tsx-mode . tsx-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode))
+    (add-to-list 'major-mode-remap-alist '(go-mode . go-ts-mode))
 
     (evil-mode 1)
     (require 'fira-code-mode)
     (global-fira-code-mode)
 
-    ;; new feature emacs 29
-    ;;(setq initial-frame-alist '(
-    ;;  (alpha-background . 70)
-    ;; )
-    ;;)
     ;; Clean up:
     ;; http://kb.mit.edu/confluence/display/istcontrib/Disabling+the+Emacs+menubar%2C+toolbar%2C+or+scrollbar
     (menu-bar-mode -1) ;; https://www.emacswiki.org/emacs/MenuBar
@@ -113,31 +112,24 @@ in
      '(org-confirm-babel-evaluate nil)
      '(org-latex-pdf-process (list "pdflatex --shell-escape -pdf %f"))
      '(custom-enabled-themes '(deeper-blue))
-     ;;'(custom-safe-themes
-       ;; adwaita-dark:
-       ;;'("15601003d94d9ccc77766b132a4dfa5bdbf8b8d553311c3d70bfd223b0314882" default))
      '(package-archives
        '(("gnu" . "https://elpa.gnu.org/packages/")
          ("nongnu" . "https://elpa.nongnu.org/nongnu/")
          ("melpa" . "https://melpa.org/packages/")))
-     '(package-selected-packages 'nil ;;'(
-     ;; commented because installed with nixos:
-     ;;evil ;; vim keybindings
-     ;;htmlize ;; get org syntax highlighting in html 
-     ;;ox-reveal ;; export ort to revealjs
-    ;;)
-    ))
+     '(package-selected-packages 'nil) ;; using NixOS to manage emacs packages
+    )
     (custom-set-faces
      )
     ;;(set-default-coding-systems 'utf-8);; isn't this default? C-h shift-C indicates it is.
     ;;update appearance:
-    (set-frame-parameter nil 'background-color "#000000")
-    (add-to-list 'default-frame-alist '(background-color . "#000000"))
-    (set-frame-parameter nil 'alpha-background 70)
+    ;;(set-frame-parameter nil 'background-color "#000000")
+    ;;(add-to-list 'default-frame-alist '(background-color . "#000000"))
+    ;;(set-frame-parameter nil 'alpha-background 70)
     (add-to-list 'default-frame-alist '(alpha-background . 70))
-    (add-to-list 'default-frame-alist '(font . "Fira Code"))
+    (add-to-list 'default-frame-alist '(font . "Fira Code")) ;; better than default
+    (set-face-background 'default "#000000")
     '';
-  home.file.".ssh/config".text = ''
+  home.file.".ssh/config".text = /* ssh_config */''
     Host cs-ssh cs
         Hostname cs-ssh.uwf.edu
         User ach22
@@ -169,7 +161,8 @@ in
         IdentitiesOnly yes
         VisualHostKey=yes
   '';
-  home.file.".config/sway/config".text = ''
+  # TODO ini isn't quite right here...
+  home.file.".config/sway/config".text = /* ini */''
     # Default config for sway
     #
     # Copy this to ~/.config/sway/config and edit it to your liking.

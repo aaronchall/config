@@ -21,17 +21,18 @@ Be sure to commit new files so flake can see them.
 
 ** config:
 
-- flake.nix - top level entry point, has all computers config'd
+- flake.nix - 111 LOC - top level entry point, has all computers config'd
   - x1 - my laptop, uses the following nix files:
-    - x1.nix - everything specific to the machine, stuff like
+    - x1.nix - 92 LOC - everything specific to the machine, stuff like
       - contents of old hardware-configuration.nix
       - keyboard media key mappings with actkbd
       - network device references from old configuration.nix
       - other machine specific configuration like systemd job and experimental services
-    - console.nix - everything I would want on any nix console/bash shell
+    - console.nix - 350 LOC - everything I would want on any nix console/bash shell
       - networks.nix - example file, actual details are uncommitted
-      - colors.nix - long story, but used in both console and gui
+      - colors.nix - 56 LOC - long story, but used in both console and gui
       - prompt.sh - instead of multiline string, allows for syntax highlighting
+    - programming.nix - 170 LOC - all programming languages, tools, and environments
     - gui.nix - everything I would want on any gui machine, browsers, editors, etc.
       - colors.nix - actually gave [[https://github.com/kovidgoyal/kitty-themes/pull/98][a pull request with these to kitty]]
     - home.nix - home-manager, dotfile kind of stuff,

@@ -1,31 +1,33 @@
 {
+  description = "This is the manager for all of Aaron's computers.";
   inputs = { ## Three inputs to the flakes:
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
   outputs = {
       self, # the directory of this flake in the store
+      # and the inputs:
       nixpkgs,
       nixpkgs-unstable,
       home-manager,
       ...}:
     let
-      system = "x86_64-linux"; 
+      system = "x86_64-linux";
       overlay-unstable = final: prev: {
         unstable = import nixpkgs-unstable {
-          inherit system;
+          inherit system; # which means system = system;
           config.allowUnfree = true;
         };
       };
-    in { ## Two possible outputs for flakes here:
+    in { # My system, x1, is the first output, also the hostname, making it default:
       nixosConfigurations.x1 = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [ # Six modules:
-          ({ pkgs, ... }: {
+        inherit system; # again, system = system;
+        modules = [ # Seven modules, first is unstable stuff:
+          ({ pkgs, ... }: {   # a module with just unstable
               nixpkgs.overlays = [
                 overlay-unstable
               ];
@@ -34,15 +36,15 @@
                 package = pkgs.unstable.ollama;
               };
               environment.systemPackages = with pkgs; [
-                #unstable.firefox
                 unstable.discord
-                unstable.discord-canary # This has screensharing on wayland!
+                unstable.discord-canary
                 # see also https://www.reddit.com/r/NixOS/comments/svm500/nixpkgs_overlay_to_have_the_latest_version_of/
               ];
           })
           ./console.nix
           ./gui.nix
           ./x1.nix
+          ./programming.nix
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;

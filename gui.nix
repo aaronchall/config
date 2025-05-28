@@ -33,7 +33,7 @@ in
 # https://man.archlinux.org/man/community/i3status-rust/i3status-rs.1.en
 # block docs: https://github.com/greshake/i3status-rust/blob/master/doc/blocks.md
 # time formatting: https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html#specifiers
-  environment.etc."xdg/i3status-rust/config.toml".text = ''
+  environment.etc."xdg/i3status-rust/config.toml".text = /* toml */''
     icons_format = "{icon}"
 
     [theme]
@@ -96,7 +96,7 @@ in
   ## TODO - is this working? webcam microphone isn't showing as source in wpctl status
   ## but still have integrated camera listed as a source...
   ## see https://www.reactivated.net/writing_udev_rules.html:
-  services.udev.extraRules = ''
+  services.udev.extraRules = /* udev */''
     # remove internal webcam, see https://wiki.archlinux.org/title/webcam_setup
     # ACTION=="ADD", ATTR{idVendor}=="04f2", ATTR{idProduct}=="b6ea", RUN="sh -c 'echo 1 > /sys/\$devpath/remove'"
 
@@ -151,18 +151,21 @@ in
   };
   environment.systemPackages = with pkgs; [
     (rstudioWrapper.override { packages = import ./RPackages.nix {inherit pkgs; }; })
+    mesa
+    mesa-demos
     # pulseaudioFull # for pactl list clients etc... # commenting for collision, supposed to use wpctl status or pw-cli ls or pw-dump
     jmtpfs # mount android - mkdir mountpoint ; jmtpfs mountpoint ; fusermount -u # to unmount
     #virt-manager # vm manager, gui for libvirt, kvm
     hplipWithPlugin # to scan, in new dir, hp-scan each page, 
     img2pdf #         then:    img2pdf *.png -o outputname.pdf
     cheese # webcam app
+    # zoneminder # Video surveillance software system
     # gphoto2 # camera software applications (unused?)
     evince # pdf reader
     zathura # pdf reader (supposedly better) vim keybindings, :open, Ctrl-R inverts colors
     zotero # citation store and manager
-    grim slurp # screenshot with Super-c - puts .png in /tmp/
-    wl-clipboard # clipboard functionality
+    grim slurp # screenshot with Super-c - puts .png in ~/Pictures
+    wl-clipboard # clipboard functionality - wl for Wayland TODO look into this more
     bemenu # like dmenu
     mako # notifications system! :)
     taskjuggler # Project management beyond Gantt chart drawing
@@ -177,17 +180,17 @@ in
     geteltorito # extract img for thumbdrive from thinkpad iso's (for CDs)
     wev # wayland event viewer - was like xorg.xev
     xorg.xmodmap
-    irssi # terminal irc client
+    irssi # terminal irc client TODO move to console.nix
     #dolphin # GUI file browser
     #kdePackages.kio-extras # libs for thumbnails in dolphin
-    kdePackages.dolphin
+    kdePackages.dolphin # and yet things can't find dolphin?
     i3status-rust # status bar for sway!
     kdenlive # video editing/processing GUI
     ffmpeg-full # video processing on command line
     helvum # manages wireplumber (pipewire)
     #pw-viz # another wireplubmer/pipewire manager - build fails
     qpwgraph # PipeWire Graph Qt GUI https://gitlab.freedesktop.org/rncbc/qpwgraph
-    easyeffects
+    easyeffects # why do I need easyeffects? Don't think I do?
     jamesdsp # An audio effect processor for PipeWire clients
     noisetorch # Virtual microphone device with noise supression for PulseAudio
     feh # originally used to set background - can also view images from startup console
@@ -197,10 +200,10 @@ in
     xournal # Note-taking application (supposes stylus)
     texlive.combined.scheme-full # tex - for latex # see https://nixos.wiki/wiki/TexLive
     graphviz
-    gnuplot
-    # Games:
+    gnuplot # don't use gnuplot, too esoteric - use Python and Matplotlib instead
+    # Games: (do I need a games.nix?)
     # openra # Red Alert game - disabled until dotnet upgraded
-    oh-my-git # An interactive Git learning game
+    oh-my-git # An interactive Git learning game TODO Try it.
     mindustry # sandbox tower defense game
     libremines # minesweeper game
     yquake2-all-games # Yamagi Quake II with all add-on games
@@ -216,7 +219,7 @@ in
     zsnes
     # End of games - probably should move to another module.
     kitty
-    vmware-horizon-client # used to use overlay until got merged
+    vmware-horizon-client
     libv4l
     gimp-with-plugins
     xf86_input_wacom
@@ -258,7 +261,8 @@ in
   # -> --> => ==> . .. ... /== //= /= != == !=
   # this is defined in-line because the syntax is very simple
   # not much to be gained from splitting to different file
-  environment.etc."xdg/kitty/kitty.conf".text = with colors; ''
+  # https://sw.kovidgoyal.net/kitty/conf/ (`#` as first character is comment)
+  environment.etc."xdg/kitty/kitty.conf".text = with colors; /* ini */ ''
     font_family Fira Code
     bold_font auto
     italic_font auto
@@ -297,5 +301,8 @@ in
     selection_foreground #${yellow}
     selection_background #${brightblack}
     repaint_delay 40
+    cursor_trail 2
   '';
+  # TODO: syntax highlighting with `editorconfig` (instead of ini) looks wrong...
+  # see https://github.com/nvim-treesitter/nvim-treesitter?tab=readme-ov-file#supported-languages
 }

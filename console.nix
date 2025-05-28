@@ -1,7 +1,7 @@
 {pkgs, lib, ...}:
 let 
-  colors = import ./colors.nix;
-  networks = import ./networks.nix;
+  colors = import ./colors.nix; # reused in multiple locations
+  networks = import ./networks.nix; # hide secrets when demoing
 in {
   nixpkgs.config.allowBroken = true;
   # Use the systemd-boot EFI boot loader.
@@ -43,6 +43,11 @@ in {
   };
 
   # VM - grep for virt to find all relevant entries
+  virtualisation = {
+    libvirtd = {
+      enable = true;
+    };
+  };
   #virtualisation = {
     #qemu.drives = {
     #  nixosvm = {
@@ -60,7 +65,7 @@ in {
    # libvirtd.enable = true;
   #};
 
-  users.extraGroups.bvoxusers.members = [ "aaron" ];
+  #users.extraGroups.bvoxusers.members = [ "aaron" ]; # ???
   # virtualisation.libvirtd.enable = true;# sudo virsh net-start default
   # users.users.user = { # for build-vm?
   #   group = [ "wheel" ];
@@ -68,59 +73,23 @@ in {
   #   initialPassword = "pw";
   # };
 
-  # run the emacs server daemon so starting emacs (as a client) is super fast:
-  services.emacs.enable = true;
-  # services.emacs.package = pkgs.emacs29-pgtk; # alpha-background, finally
-  # oh no, alpha-background seems broken again!
-  services.emacs.package = (with pkgs; (
-    (emacsPackagesFor emacs29-pgtk).emacsWithPackages (epkgs: with epkgs; [
-        evil
-        ess
-        projectile
-        neotree
-        ob-rust
-        ob-elm
-        treesit-grammars.with-all-grammars
-        company
-        # company-stan
-        company-math
-        company-jedi
-        company-ghci
-        company-org-block
-        company-c-headers
-        company-nixos-options
-        company-native-complete
-        helm
-        flycheck
-        magit
-        lsp-mode
-        evil-markdown
-        htmlize
-        ox-reveal
-        zotero
-        fira-code-mode
-        doom-themes
-        doom-modeline
-        adwaita-dark-theme
-        gnuplot
-        gnuplot-mode
-        lsp-pyright
-      ]
-    )
-  ));
   programs = {
-    mtr.enable = true;
+    mtr.enable = true; # my traceroute, combines ping with traceroute
     tmux.enable = true;
+    /*neovim = {
+      enable = true;
+      vimAlias = true;... 
+    }*/
   };
-  # use neovim for lsp support
-  programs.neovim = {
+
+  programs.neovim = { # use neovim for lsp support
     enable = true;
     vimAlias = true;
     viAlias = true;
     defaultEditor = true;
     withNodeJs = true; # python3 true by default
     configure = {
-      customRC = /* vimrc */ ''
+      customRC = /* vim */ ''
         scriptencoding utf-8
         set encoding=utf-8
         syntax on
@@ -139,7 +108,7 @@ in {
         highlight ColorColumn ctermbg=NONE ctermfg=red 
         set backspace=indent,eol,start
         let g:elm_format_autosave = 1
-        " https://shapeshed.com/vim-netrw/
+        " https://shapeshed.com/vim-netrw/autoformattr
         let g:netrw_banner=0
         let g:netrw_liststyle=3
         let g:netrw_browse_split=4
@@ -151,6 +120,8 @@ in {
         augroup END
         command! -nargs=0 Diff w !diff % -
         lua require('lspconfig').pyright.setup{}
+        lua require('nvim-treesitter.configs').setup{highlight = {enable = true,},}
+        hi Normal guibg=black
       '';
       packages.myVimPackage = with pkgs.vimPlugins; {
         start = [
@@ -159,7 +130,7 @@ in {
           #jedi-vim typescript-vim rust-vim vim-polyglot
           nvim-treesitter.withAllGrammars
           coc-pyright # completion and uses typescript - Python
-          nvim-lspconfig # spelling?
+          nvim-lspconfig
         ];
       };
     };
@@ -167,14 +138,19 @@ in {
 
   users.users.aaron = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "video" "audio" "libvirtd" ];
+    extraGroups = [
+      "wheel" # I'm the big wheel on my machine, the big cheese. 
+      "video" # I don't remember why? from hacks for screensharing?
+      "audio" # IDK if actually needed?
+      "libvirtd" # to manage virtual machines
+    ];
   };
   users.motd = ''
-    Welcome to NixOS!
+    Welcome to NixOS! (start_sway)
   '';
   environment.variables = {
-    PROMPT_COMMAND = "history -a";
-    EDITOR = "vim";
+    PROMPT_COMMAND = "history -a; history -n";
+    #EDITOR = "vim";
     # use the terminal colors we are defining in colors.nix:
     BAT_THEME = "ansi"; 
   };
@@ -286,7 +262,10 @@ in {
     switch_old () { # usage: switch x1  *or* switch knode
       sudo nixos-rebuild switch -L --flake ~/config#$1 ;
     }
-    switch () { # update and switch - this uses hostname for flake.
+    switch () {
+      nh os switch ~/config ; # uses hostname for flake.
+    }
+    switch_and_update () { # update & switch - uses hostname for flake.
       nh os switch --update ~/config ;
     }
     build_old () {
@@ -302,16 +281,13 @@ in {
       sudo nix-collect-garbage --delete-older-than 30d ;
     }
   '';
-  # Firewall:
+  # Firewall: check with 
+  # nix eval .#nixosConfigurations.x1.config.networking.firewall.allowedTCPPorts
   networking.firewall.allowedTCPPorts = [ ];
   networking.firewall.allowedUDPPorts = [ ];
 
   # virtualisation.docker.enable = true;
   virtualisation.podman.enable = true;
-
- # services.ollama = {
- #   enable = true;
- # };
 
   nixpkgs.config.allowUnfree = true;
   environment.shellAliases = {
@@ -333,28 +309,33 @@ in {
     follow_wpa_log = "journalctl -fu wpa.supplicant.service";
   };
   environment.systemPackages = with pkgs; [
+    yazi # console file browser written in rust
+    ed # just for fun - it's the standard editor, duh
+    #nano # Standard in NixOS - use the nano container to show off?
     nh # "nix helper" features for builds like trees etc
-    mtr
-    nix-output-monitor
+    #mtr # enabled? redundant? commented to test
+    nix-output-monitor # same API as nix command, but better output???
     acpi # battery info, thermals, ac adapter
     lm_sensors # required by temperature block for i3status-rs
     dmidecode # determine memory configuration
     smartmontools # SMART disk health
     neofetch # see my system details
+    fastfetch # Better than neofetch
     lsof # list open files
     ecryptfs # Enterprise-class stacked cryptographic filesystem
     pstree # Show the set of running processes as a tree
     coreutils # fileutils, shellutils and textutils (ls, sort, head) https://www.gnu.org/software/coreutils/
-    pciutils # idk
+    pciutils # lspci
     hwinfo # hardware info
     lshw # list hardware
-    usbutils # idk
+    usbutils # lsusb
     bind # "Domain name server" for nslookup
     file # info on files
     bat # better cat
     eza # ls improvement, written in rust
     #htop # better top
-    btop # best top
+    #btop # best top - keep crashing!
+    bottom # btm - written in rust, doesn't seem to crash.
     tmux # terminal multiplexer
     rustscan # scan ports fast https://rustscan.github.io/RustScan/
     gnutar gzip gawk gnused gnugrep patchelf findutils 
@@ -370,132 +351,11 @@ in {
     pinfo # browse info pages with pinfo 
     tree
     git
+    lazygit
     angband
     zip # needed for fce course?
     unzip
     p7zip
     cowsay
-    # Programming languages and related utils
-    entr # run arbitrary commands when files change
-    sbcl
-    rlwrap
-    # jdk8
-    jdk21
-    #qemu-utils
-    # jdk17
-    valgrind
-    #gcc
-    gdb
-    openmpi
-    clang # conflicts with gcc...
-    gnumake
-    rlwrap
-    oracle-instantclient
-    sbcl
-    spark
-    sbt
-    #hadoop # I think this is provided by spark because collisions
-    pandoc
-    #(rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
-    pyright
-    (python3Full.withPackages (ps: with ps; [
-      #stem # tor
-      #python-sat # commented to demo
-#      jedi-language-server
-#      pycosat
-#      pillow
-#      types-pillow
-      requests
-#      types-requests
-#      beautifulsoup4
-#      guppy3 # get heap/memory layout info
-#      pip
-#      numpy
-#      numpy-stl # stereolithography
-#      scipy
-#      mypy
-#      flake8
-#      pytest
-#      coverage
-#      cython
-#      wheel
-#      jupyterlab
-#      flax
-#      pyspark
-#      networkx
-#      pygraphviz
-#      pygame
-#      #tensorflow
-#      # tensorflow-datasets
-#      #keras
-#      # torchaudio
-     # pyright # for lsp in neovim
-#    #   #jupyterlab_lsp # pypi says requires:
-#    #   #python-language-server # see https://pypi.org/project/python-language-server/ :
-#    #   #pyls-mypy
-#    #   #pyls-isort
-#    #   #pyls-black
-      pandas
-      statsmodels
-      #ipython
-      scikitlearn
-#      sympy
-#    #tornado
-#    #   flask
-#    #   django
-#    #   pympler
-#    #   pyqtgraph
-    ]))
-    (haskellPackages.ghcWithPackages (pkgs: with pkgs; [
-      cabal-install
-      lens
-      yesod-bin
-      tasty
-      # intero # marked broken
-      hlint        # req'd by haskell layer
-      hspec
-      pandoc
-      apply-refact # req'd
-      #stylish-haskell # marked broken
-      hasktags
-      hoogle
-      # ghc-mod # marked broken
-      #haskell-lsp
-      #hie # not defined
-      #ihaskell # maybe { allowBroken = true; }
-      Euterpea
-    ]))
-    go
-    rustc
-    cargo
-    rustfmt
-    nodejs
-    deno
-  ] ++ (with elmPackages; [
-    elm
-    #elm-format
-    elm-analyse # lint?
-    elm-coverage
-    elm-test
-    elm-review
-    elm-language-server
-    elm-optimize-level-2
-    elm-live # live reload
-  ]) ++ (with nodePackages; [
-    npm
-    typescript
-    typescript-language-server
-    ts-node
-    #create-next-app
-    #react-tools
-    #yarn # TODO - do I need this for hadoop or does hadoop supply its own?
-  ]) ++ [
-    # do I need these?: 
-    kubectl # kubernetes 
-    #docker # why?
-    #podman # replaces docker (why ?) do I need this in addition to enable above?
-    openshift
-    #minishift # discontinued upstream, use crc instead
-    crc # manage local OpenShift 4.x cluster or Podman VM optimized for testing and development
   ];
 }
