@@ -39,11 +39,11 @@ Be sure to commit new files so flake can see them.
       some things are just better handled by home-manager anyways.
       - home console - not broken down into these... yet.
       - home gui - not broken down into...
+  - idea - my wife's laptop, a Lenovo Ideapad Pro 5
+    - console.nix - same file as above, for reuse!
+    - nat.nix - everything specific to the ideapad!
   - server
     - console.nix
     - home.nix console semantic
 ** TODOS:
 *** TODO add server config
-** Defunct
-
-- screensharing-hacks.nix - no need to check these out unless you're trying to get screensharing to work with wayland

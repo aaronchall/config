@@ -16,13 +16,61 @@ in {
   # see /etc/resolv.conf   [ cloudflare DNS     ,     Google DNS     ]
   networking.nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4" ];
   # see networks.nix for wifi network configuration:
-  networking.wireless.enable = true;  # Enables wpa_supplicant.
   # can I get this in my hardware-configuration.nix?
   /*networking.wireless.interfaces = [ "wlp0s20f3" 
                                      #"wlp3s0" 
     ]; # must tweak for multiple laptop installs (grep for wlp)
   */
-  networking.wireless.networks = networks; 
+  #networking.useNetworkd = true;
+  networking.wireless = {
+    enable = true; # Enables wpa_supplicant.
+    /*iwd = { # use iwctl, 
+      enable = false;
+      settings = {
+        IPv6.Enabled = true;
+        Settings.AutoConnect = true;
+      };
+    };*/
+    networks = networks;
+    userControlled = { # wpa_cli
+      enable = true;
+      group = "wheel";
+    };
+    allowAuxiliaryImperativeNetworks = true; # allow both static and dynamic e.g. wpa_supplicant_gui
+  };
+  /*networking.extraHosts = ''
+    # Productivity Blacklist
+    127.0.0.1    old.reddit.com
+    127.0.0.1    www.reddit.com
+    127.0.0.1    reddit.com
+    127.0.0.1    www.facebook.com
+    127.0.0.1    facebook.com
+    127.0.0.1    www.twitter.com
+    127.0.0.1    twitter.com
+    127.0.0.1    www.x.com
+    127.0.0.1    x.com
+    127.0.0.1    www.linkedin.com
+    127.0.0.1    linkedin.com
+    127.0.0.1    www.youtube.com
+    127.0.0.1    youtube.com
+    127.0.0.1    i.ytimg.com
+    127.0.0.1    i9.ytimg.com
+    127.0.0.1    yt3.ggpht.com
+    127.0.0.1    www.4chan.org
+    127.0.0.1    4chan.org
+    127.0.0.1    boards.4chan.org
+    127.0.0.1    news.ycombinator.com
+    127.0.0.1    ycombinator.com
+    127.0.0.1    www.discord.com
+    127.0.0.1    discord.com
+    127.0.0.1    www.discord.gg
+    127.0.0.1    discord.gg
+    127.0.0.1    discordapp.com
+    127.0.0.1    www.discordapp.com
+    127.0.0.1    discordapp.net
+    127.0.0.1    www.discordapp.net
+    # can run `systemctl status nscd.service` to restart, but happens automatically on switching.
+  '';*/
   services.acpid.enable = true; # maybe need: services.acpid.acEventCommands -> ""
   # services.gvfs.enable = true; # use android devices MTP, dolphin apparently doesn't use?
   time.timeZone = "US/Eastern";
@@ -33,7 +81,7 @@ in {
   console = { # sets /etc/vconsole.conf
     # see `ls /etc/static/kbd/consolefonts/ | grep .psfu.gz` for fonts
     # samples: https://adeverteuil.github.io/linux-console-fonts-screenshots/
-    font = "Lat2-Terminus16";
+    font = "Lat2-Terminus16"; # check out open dyslexic?
     # or maybe see kmscon? https://search.nixos.org/options?query=kmscon
     keyMap = "us";
     colors = with colors;
@@ -76,6 +124,12 @@ in {
   programs = {
     mtr.enable = true; # my traceroute, combines ping with traceroute
     tmux.enable = true;
+    nix-ld = { # give FHS to Python compiled for other linuxes:
+      enable = true;
+      libraries = with pkgs; [
+        # nothing added yet...
+      ];
+    };
     /*neovim = {
       enable = true;
       vimAlias = true;... 
@@ -118,9 +172,24 @@ in {
           autocmd!
           autocmd VimEnter * :Vexplore
         augroup END
+        " :Diff to see diff on current versus saved:
         command! -nargs=0 Diff w !diff % -
-        lua require('lspconfig').pyright.setup{}
-        lua require('nvim-treesitter.configs').setup{highlight = {enable = true,},}
+        " below works but commented to test - add python config later?
+        " lua vim.lsp.config['pyright'] = {}
+        lua vim.lsp.enable('pyright')
+        lua << EOF
+        require('nvim-treesitter.configs').setup{
+            highlight = {enable = true,},
+            incremental_selection = {
+                enable = true,
+                keymaps = {
+                    init_selection = "<CR>",
+                    node_incremental = "<CR>",
+                    node_decremental = "<BS>",
+                },
+            },
+        }
+        EOF
         hi Normal guibg=black
       '';
       packages.myVimPackage = with pkgs.vimPlugins; {
@@ -153,9 +222,19 @@ in {
     #EDITOR = "vim";
     # use the terminal colors we are defining in colors.nix:
     BAT_THEME = "ansi"; 
+    HISTSIZE = 10000;
+    HISTFILESIZE = 10000;
   };
-  nix.settings = {
-    extra-experimental-features = [ "nix-command" "flakes" ];
+  nix = {
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    settings = {
+      auto-optimise-store = true; # saves tons of space, note "s" spelling.
+      experimental-features = [ "nix-command" "flakes" ];
+    };
   };
   # Bash config:
   # https://www.gnu.org/software/bash/manual/bash.html
@@ -259,14 +338,22 @@ in {
     }
 
     # Nix OS convenience functions:
-    switch_old () { # usage: switch x1  *or* switch knode
+    ___switch_old () { # usage: switch x1  *or* switch knode
       sudo nixos-rebuild switch -L --flake ~/config#$1 ;
     }
+    # --fallback gives ability to build if not connected (e.g. adding wifi after arriving to new location)
+    # (--offline builds without connecting at all)
     switch () {
-      nh os switch ~/config ; # uses hostname for flake.
+      nh -v os switch ~/config --fallback ; # uses hostname for flake.
+    }
+    build () {
+      nh -v os build ~/config --fallback ;
+    }
+    switch_boot () {
+      nh -v os boot ~/config --fallback ;
     }
     switch_and_update () { # update & switch - uses hostname for flake.
-      nh os switch --update ~/config ;
+      nh -v os switch --update ~/config ;
     }
     build_old () {
       sudo nixos-rebuild build -L --flake ~/config#$1 ;
@@ -291,12 +378,11 @@ in {
 
   nixpkgs.config.allowUnfree = true;
   environment.shellAliases = {
+    ssh_idea = "ssh idea.local";
     docker = "podman";
     reboot_history = "last reboot";
     ls = "eza";
     list_generations = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
-    # This is WHY - breaking up into separate files is dumb.
-    #view_config = "bat ~/config/configuration.nix"; # defunct
     #edit_config = "vi ~/config/configuration.nix"; # defunct
     build_config = "cd ~/config && sudo nixos-rebuild build --flake ~/config/#x1 ; cd -";
     switch_config = "cd ~/config && sudo nixos-rebuild switch --flake ~/config/#x1 ; cd -";
@@ -313,9 +399,9 @@ in {
     ed # just for fun - it's the standard editor, duh
     #nano # Standard in NixOS - use the nano container to show off?
     nh # "nix helper" features for builds like trees etc
-    #mtr # enabled? redundant? commented to test
     nix-output-monitor # same API as nix command, but better output???
     acpi # battery info, thermals, ac adapter
+    upower # D-Bus service for power management
     lm_sensors # required by temperature block for i3status-rs
     dmidecode # determine memory configuration
     smartmontools # SMART disk health
@@ -333,11 +419,10 @@ in {
     file # info on files
     bat # better cat
     eza # ls improvement, written in rust
-    #htop # better top
-    #btop # best top - keep crashing!
-    bottom # btm - written in rust, doesn't seem to crash.
-    tmux # terminal multiplexer
+    bottom # btm - written in rust, doesn't seem to crash like btop does.
+    tmux # terminal multiplexer # see zelij
     rustscan # scan ports fast https://rustscan.github.io/RustScan/
+    nmap # rustscan requires this. So why doesn't it *require* it so I don't have to list this then?
     gnutar gzip gawk gnused gnugrep patchelf findutils 
     fwts # Firmware Test Suite
     wget # e.g. wget -c http://example.com/bigfile.tar.gz
@@ -352,10 +437,11 @@ in {
     tree
     git
     lazygit
-    angband
+    angband # direct descendant of rogue (-> moria -> angband)
     zip # needed for fce course?
     unzip
     p7zip
     cowsay
+    odoo
   ];
 }

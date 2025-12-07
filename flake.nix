@@ -1,16 +1,19 @@
 {
   description = "This is the manager for all of Aaron's computers.";
   inputs = { ## Three inputs to the flakes:
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    # swapped below when approaching 25.11 release but it wasn't available yet
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    #nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.05";
+      #url = "github:nix-community/home-manager/master";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
   outputs = {
       self, # the directory of this flake in the store
-      # and the inputs:
+      # and the three inputs:
       nixpkgs,
       nixpkgs-unstable,
       home-manager,
@@ -32,8 +35,15 @@
                 overlay-unstable
               ];
               services.ollama = {
-                enable = true;
+                enable = true; # below pulled on service launch!
                 package = pkgs.unstable.ollama;
+                loadModels = [ # Size, Context
+                  "mistral" # 4.4 GB, 32K
+                  #"smollm2" # 1.8 GB, 8K
+                  #"granite" # 2.1 GB, 128K
+                  #"granite4:350m-h" # 366 MB, 1M
+                  #"granite4:7b-a1b-h" # 4.2 GB, 1M
+                ];
               };
               environment.systemPackages = with pkgs; [
                 unstable.discord
@@ -53,25 +63,11 @@
           }
         ];
       };
-      nixosConfigurations.nat = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.idea = nixpkgs.lib.nixosSystem {
         inherit system;
-        modules = [ # Six modules:
-          ({ config, pkgs, ... }: {
-              nixpkgs.overlays = [ overlay-unstable ];
-              environment.systemPackages = with pkgs; [
-                unstable.discord-canary
-              ];
-          })
+        modules = [
           ./console.nix
-          ./gui.nix
-          ./dad.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = false;
-            home-manager.users.aaron = { imports = [ ./home.nix ]; };
-            home-manager.users.nat = { imports = [ ./home.nix ]; };
-          }
+          ./nat.nix
         ];
       };
       nixosConfigurations.dad = nixpkgs.lib.nixosSystem {

@@ -1,6 +1,7 @@
 { networking, modulesPath, lib, config, pkgs, ... }: {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
+    ./printhpdj2700.nix
   ];
   boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
@@ -18,12 +19,17 @@
     { device = "/dev/disk/by-uuid/e55223ae-0e5c-4a4a-97e1-2ea4ac309d36"; }
   ];
   #TODO review, CPU always low, maybe I can get better perf when plugged in?
-  powerManagement.cpuFreqGovernor = lib.mkDefault "powersave";
+  powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   #networking.interfaces.enp0s31f6.useDHCP = true; # old laptop
+  networking.interfaces.wlan0.useDHCP = true;
   networking.interfaces.wlp0s20f3.useDHCP = true;
   networking.hostName = "x1";
-  networking.wireless.interfaces = [ "wlp0s20f3" ];
+  networking.wireless.interfaces = [
+    "wlp0s20f3"
+    "wlan0"
+  ];
+  networking.usePredictableInterfaceNames = false;
 
   programs.light.enable = true;
   #hardware.acpilight.enable = true; # TODO still desirable?
@@ -68,6 +74,7 @@
   #  partOf = [ "site_check.service" ];
   #  timerConfig.OnCalendar = "minutely";
   #};
+  /* # this was for work just to make sure I stay very active:
   systemd.user.services.check_desktop = { 
     description = "Check desktop";
     wantedBy = [ "graphical-session.target" ];
@@ -79,6 +86,7 @@
     # https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html
     startAt = "Mon..Fri 09:00..17:00/5"; # creates a .timer for the service
   };
+  */
   #### Kubernetes stuff:
   services.k3s = {
     enable = false;#true;

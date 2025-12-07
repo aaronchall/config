@@ -15,6 +15,10 @@ in
   boot.extraModprobeConfig = ''
     options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
   '';
+  # avoid complete system freeze when memory runs out:
+  services.earlyoom.enable = true;
+  services.earlyoom.freeMemThreshold = 10;  # % of free RAM before killing
+  services.earlyoom.freeSwapThreshold = 10; # % of free swap before killing
 
   programs.virt-manager.enable = true;
   programs.sway.enable = true;
@@ -103,10 +107,12 @@ in
     # remove microphone ability from external webcam, see https://www.mjt.me.uk/posts/blacklisting-certain-microphones-linux/
     SUBSYSTEM=="usb", DRIVER=="snd-usb-audio", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0843", ATTR{authorized}="0"
   '';
+  #### see printhpdj2700.nix
   ## TODO Factor into printing.nix:
   # Below enables printing (CUPS), print drivers (Dell), 
+  /*
   services.printing = {
-    enable = false;
+    enable = true;
     drivers = [ pkgs.gutenprint ];
   };
   # check out systemd print manager?
@@ -118,7 +124,7 @@ in
   # like  "Impossible to connect to XXX.local: Name or service not known"
     nssmdns4 = true;
   };
-
+  */
   ## TODO Factor into pipewire.nix?
   # enable real-time scheduling priority for processes like pulseaudio:
   security.rtkit.enable = true; # Pipewire uses this, required for VMWare Horizon 
@@ -151,22 +157,30 @@ in
   };
   environment.systemPackages = with pkgs; [
     (rstudioWrapper.override { packages = import ./RPackages.nix {inherit pkgs; }; })
+    wl-mirror # mirror output on laptop, TODO hotkey in config `wl-mirror <srcoutput> <destoutput>`
+    # Speech to text:
+    stt
+    openai-whisper
+    wyoming-faster-whisper
+    vscodium
+    nwg-look
+    tokyonight-gtk-theme
     mesa
     mesa-demos
     # pulseaudioFull # for pactl list clients etc... # commenting for collision, supposed to use wpctl status or pw-cli ls or pw-dump
     jmtpfs # mount android - mkdir mountpoint ; jmtpfs mountpoint ; fusermount -u # to unmount
     #virt-manager # vm manager, gui for libvirt, kvm
-    hplipWithPlugin # to scan, in new dir, hp-scan each page, 
+    hplipWithPlugin # to scan, in new dir, hp-scan each page, - failed before 25.11
     img2pdf #         then:    img2pdf *.png -o outputname.pdf
     cheese # webcam app
     # zoneminder # Video surveillance software system
     # gphoto2 # camera software applications (unused?)
     evince # pdf reader
-    zathura # pdf reader (supposedly better) vim keybindings, :open, Ctrl-R inverts colors
+    zathura # pdf reader (better than evince) vim keybindings, :open, Ctrl-R inverts colors
     zotero # citation store and manager
     grim slurp # screenshot with Super-c - puts .png in ~/Pictures
     wl-clipboard # clipboard functionality - wl for Wayland TODO look into this more
-    bemenu # like dmenu
+    bemenu # like dmenu, Ctrl-d (set up in sway), type in name of app to launch in sway
     mako # notifications system! :)
     taskjuggler # Project management beyond Gantt chart drawing
     wf-recorder
@@ -185,9 +199,9 @@ in
     #kdePackages.kio-extras # libs for thumbnails in dolphin
     kdePackages.dolphin # and yet things can't find dolphin?
     i3status-rust # status bar for sway!
-    kdenlive # video editing/processing GUI
+    kdePackages.kdenlive # video editing/processing GUI
     ffmpeg-full # video processing on command line
-    helvum # manages wireplumber (pipewire)
+    helvum # manages wireplumber (pipewire name of app to launch in sway
     #pw-viz # another wireplubmer/pipewire manager - build fails
     qpwgraph # PipeWire Graph Qt GUI https://gitlab.freedesktop.org/rncbc/qpwgraph
     easyeffects # why do I need easyeffects? Don't think I do?
@@ -197,7 +211,7 @@ in
     xlsx2csv # Convert xlsx to csv
     blender # 3D Creation/Animation/Publishing System
     libnotify # terminal but only used for guis???
-    xournal # Note-taking application (supposes stylus)
+    xournalpp # Note-taking application (supposes stylus)
     texlive.combined.scheme-full # tex - for latex # see https://nixos.wiki/wiki/TexLive
     graphviz
     gnuplot # don't use gnuplot, too esoteric - use Python and Matplotlib instead
@@ -212,18 +226,18 @@ in
     vectoroids # Clone of the classic arcade game Asteroids by Atari
     torus-trooper # Fast-paced abstract scrolling shooter game
     #factorio # build and maintain factories # if fails, see instructions when fails
-    dwarf-fortress # 
+    dwarf-fortress # Sim-City meets rogue
     pioneer # space adventure game set in the Milky Way galaxy at the turn of the 31st century
     mame # arcade emulator
-    snes9x-gtk
+    snes9x-gtk # SNES emulators
     zsnes
     # End of games - probably should move to another module.
-    kitty
-    vmware-horizon-client
+    kitty # selected for ligatures for example: => is an arrow in kitty.
+    omnissa-horizon-client # connect to client VMs
     libv4l
     gimp-with-plugins
     xf86_input_wacom
-    wacomtablet
+    kdePackages.wacomtablet # do I really need this?
     libwacom
     #fbreader
     chromium # (not redundant to enable policies)
@@ -251,7 +265,7 @@ in
     google-fonts
     powerline-fonts
     emacs-all-the-icons-fonts
-    noto-fonts-extra
+    noto-fonts
     liberation_ttf
     source-code-pro
     fira-code

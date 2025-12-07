@@ -1,54 +1,54 @@
 {pkgs, lib, ...}:
 {
   # run the emacs server daemon so starting emacs (as a client) is super fast:
-  services.emacs.enable = true;
-  services.emacs.package = (with pkgs; (
-    (emacsPackagesFor emacs-pgtk).emacsWithPackages (epkgs: with epkgs; [
-        evil
-        ess
-        projectile
-        neotree
-        ob-rust
-        ob-elm
-        elm-mode
-        treesit-grammars.with-all-grammars
-        #tree-sitter-langs
-        company
-        # company-stan
-        company-math
-        company-jedi
-        company-ghci
-        company-org-block
-        company-c-headers
-        company-nixos-options
-        company-native-complete
-        helm
-        flycheck
-        magit
-        lsp-mode
-        evil-markdown
-        htmlize
-        ox-reveal
-        zotero
-        fira-code-mode
-        doom-themes
-        doom-modeline
-        adwaita-dark-theme
-        gnuplot
-        gnuplot-mode
-        lsp-pyright
-      ]
-    )
-  ));
+  services.emacs = {
+    enable = true;
+    package = (with pkgs; (
+      (emacsPackagesFor emacs-pgtk).emacsWithPackages (epkgs: with epkgs; [
+          evil # evil-mode provides vim keybindings (but not in everything! but better than viper, the builtin vim keybindings)
+          ess # Emacs Speaks Statistics (R and SAS)
+          projectile # project management?
+          neotree
+          ob-rust # org-babel
+          ob-elm
+          org # let's see if this satisfies the req's of ob-elm, company-org-block, and ox-reveal?
+          elm-mode
+          treesit-grammars.with-all-grammars
+          #tree-sitter-langs
+          company # means "complete any"
+          # company-stan
+          company-math
+          company-jedi # python
+          company-ghci # haskell
+          #company-org-block # org block autocompletion?
+          company-c-headers
+          company-nixos-options
+          company-native-complete
+          helm
+          flycheck
+          magit
+          lsp-mode
+          evil-markdown
+          htmlize
+          ox-reveal
+          zotero
+          fira-code-mode
+          doom-themes
+          doom-modeline
+          adwaita-dark-theme
+          gnuplot
+          gnuplot-mode
+          lsp-pyright
+        ]
+      )
+    ));
+  };
   environment.systemPackages = with pkgs; [
     ## Programming languages and related utils
     gnumake
-    entr # run arbitrary commands when files change
-    # entr usage: ls . | entr python -m main
-    #### Lisp:
-    sbcl
+    entr # run commands when files change, ie: ls . | entr python -m main
     rlwrap # readline wrap?
-    # jdk8
+    sbcl # Steel Bank Common Lisp (Cargegie Mellon)
     jdk21 # Java 21
     #android-studio-full
     #qemu-utils
@@ -70,10 +70,12 @@
     #### R command line environment, RPackages.nix because RStudio in gui.nix
     (rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
     #### Python:
+    uv # replace pip and package your python stuff better?
     pyright # Python linting tools, uses nodejs, probably why here and not below.
-    (python3Full.withPackages (ps: with ps; [
+    (python3.withPackages (ps: with ps; [
+      ollama # python lib to interface with ollama
       #stem # tor
-      #python-sat # commented to demo
+      python-sat # commented to demo
 #      jedi-language-server
 #      pycosat
 #      pillow
@@ -81,7 +83,7 @@
       requests
 #      types-requests
 #      beautifulsoup4
-#      guppy3 # get heap/memory layout info
+      guppy3 # get heap/memory layout info
 #      pip
 #      numpy
 #      numpy-stl # stereolithography
@@ -92,7 +94,7 @@
 #      coverage
 #      cython
 #      wheel
-#      jupyterlab
+      jupyterlab
 #      flax
 #      pyspark
 #      networkx
@@ -105,8 +107,8 @@
 #    #   #jupyterlab_lsp # pypi says requires:
       pandas
       statsmodels
-      #ipython
-      scikitlearn
+      ipython
+      scikit-learn
 #      sympy
 #    #tornado
 #    #   flask
@@ -120,18 +122,18 @@
       lens
       yesod-bin
       tasty
-      # intero # marked broken
+#      # intero # marked broken
       hlint        # req'd by haskell layer
       hspec
       pandoc
-      apply-refact # req'd
-      #stylish-haskell # marked broken
+#      apply-refact # req'd
+      stylish-haskell # marked broken
       hasktags
       hoogle
-      # ghc-mod # marked broken
-      #haskell-lsp
-      #hie # not defined
-      #ihaskell # maybe { allowBroken = true; }
+#      # ghc-mod # marked broken
+#      #haskell-lsp
+#      #hie # not defined
+      ihaskell # maybe { allowBroken = true; }
       Euterpea
     ]))
     #### Go:
@@ -147,7 +149,7 @@
     npm
     typescript
     typescript-language-server
-    ts-node
+    #ts-node # removed, support now built into node?
     #create-next-app
     #react-tools
     #yarn # TODO - do I need this for hadoop or does hadoop supply its own?
@@ -156,7 +158,7 @@
     elm
     #elm-format
     elm-analyse # lint?
-    elm-coverage
+    #elm-coverage # removed? no longer available...
     elm-test
     elm-review
     elm-language-server

@@ -11,8 +11,10 @@ in
   # gtk.theme.package = "adwaita-dark";
   programs.git = { # like setting up ~/.gitconfig file for your user:
     enable = true;
-    userName = "Aaron Hall";
-    userEmail = "aaronchall@yahoo.com";
+    settings.user = {
+      name = "Aaron Hall";
+      email = "aaronchall@yahoo.com";
+    };
   };
   # setting up git ignore file for user:
   home.file.".config/git/ignore".text = /* gitignore */ ''
@@ -75,11 +77,11 @@ in
     ;;(require 'powerline) ;; see https://www.youtube.com/watch?v=kAA37BR2B1Y 26:00ish for moar...
     (add-hook 'after-init-hook 'global-company-mode)
     (add-hook 'org-mode-hook (lambda () (progn
-      (require 'ox-reveal)
-      (require 'org-tempo)
-      (require 'htmlize)
+      (require 'ox-reveal) ;; org-export revealjs
+      (require 'org-tempo) ;; org templates, e.g.: <s-TAB
+      (require 'htmlize)   ;; syntax highlighting in exports to html
     )))
-    ;;(add-hook 'python-ts-mode-hook #'tree-sitter-hl-mode)
+    ;;(add-hook 'python-ts-mode-hook #'tree-sitter-hl-mode) ;; ts below means tree-sitter:
     (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
     (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode))
     (add-to-list 'major-mode-remap-alist '(typescript-mode . typescript-ts-mode))
