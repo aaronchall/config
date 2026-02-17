@@ -7,6 +7,8 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
+  #boot.loader.grub.gfxmodeBios = "1920x1080,auto";
+  boot.kernelParams = [ "video=eDP-1:1920x1080@60" ];
   fileSystems."/" = { 
     device = "/dev/disk/by-uuid/cf9a7695-02fa-4367-8ab1-a63521fe7c96";
     fsType = "ext4";
@@ -23,10 +25,10 @@
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   #networking.interfaces.enp0s31f6.useDHCP = true; # old laptop
   networking.interfaces.wlan0.useDHCP = true;
-  networking.interfaces.wlp0s20f3.useDHCP = true;
+  #networking.interfaces.wlp0s20f3.useDHCP = true;
   networking.hostName = "x1";
   networking.wireless.interfaces = [
-    "wlp0s20f3"
+    #"wlp0s20f3"
     "wlan0"
   ];
   networking.usePredictableInterfaceNames = false;

@@ -13,6 +13,10 @@ in {
   # below won't boot :(
   #boot.kernelPackages = pkgs.linuxPackages-rt_latest;
   # why do these feel redundant?
+  #zramSwap = {
+  #  enable = true;
+  #  memoryPercent = 25;
+  #};
   # see /etc/resolv.conf   [ cloudflare DNS     ,     Google DNS     ]
   networking.nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4" ];
   # see networks.nix for wifi network configuration:
@@ -343,17 +347,25 @@ in {
     }
     # --fallback gives ability to build if not connected (e.g. adding wifi after arriving to new location)
     # (--offline builds without connecting at all)
-    switch () {
-      nh -v os switch ~/config --fallback ; # uses hostname for flake.
-    }
+    # each nh call uses hostname for flake by default.
+    # each update_and_... function updates lock file first.
     build () {
       nh -v os build ~/config --fallback ;
     }
-    switch_boot () {
+    update_and_build () {
+      nh -v os build --update ~/config --fallback ;
+    }
+    switch () {
+      nh -v os switch ~/config --fallback ;
+    }
+    update_and_switch () {
+      nh -v os switch --update ~/config --fallback ;
+    }
+    boot () { # switches on boot
       nh -v os boot ~/config --fallback ;
     }
-    switch_and_update () { # update & switch - uses hostname for flake.
-      nh -v os switch --update ~/config ;
+    update_and_boot () {
+      nh -v os boot --update ~/config --fallback ;
     }
     build_old () {
       sudo nixos-rebuild build -L --flake ~/config#$1 ;
@@ -401,7 +413,8 @@ in {
     nh # "nix helper" features for builds like trees etc
     nix-output-monitor # same API as nix command, but better output???
     acpi # battery info, thermals, ac adapter
-    upower # D-Bus service for power management
+    #upower # D-Bus service for power management - run service insead
+    batmon # terminal dashboard for power info
     lm_sensors # required by temperature block for i3status-rs
     dmidecode # determine memory configuration
     smartmontools # SMART disk health

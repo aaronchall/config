@@ -16,9 +16,23 @@ in
     options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
   '';
   # avoid complete system freeze when memory runs out:
-  services.earlyoom.enable = true;
-  services.earlyoom.freeMemThreshold = 10;  # % of free RAM before killing
-  services.earlyoom.freeSwapThreshold = 10; # % of free swap before killing
+  # services.earlyoom = {
+  #   enable = false; # this is just killing my UI
+  #   freeMemThreshold = 10;  # % of free RAM before killing
+  #   freeSwapThreshold = 10; # % of free swap before killing
+  # };
+  services.upower = {
+    enable = true;
+    usePercentageForPolicy = true;
+    percentageLow = 20;
+    percentageCritical = 10;
+    percentageAction = 5; # percentage for critical action - why not same as percentageCritical? idk
+    criticalPowerAction = "Hibernate";
+  };
+  #services.mako = {
+  #  enable = true;
+  #};
+
 
   programs.virt-manager.enable = true;
   programs.sway.enable = true;
@@ -97,6 +111,19 @@ in
     block = "battery"
     format = "$icon $percentage $time $power"
   '';
+  /*systemd.user.services.battery_alert = {
+    description = "Notify user if battery low.";
+    wantedBy = [ "graphical-session.target" ];
+    serviceConfig = {Type = "simple";};
+    path = with pkgs; [libnotify ];
+    script = ''
+        && \
+        notify-send -t 57000 -c 'network' 'Check Battery' \
+          'battery is low!'
+        # '<a href="https://aaronhall.dev">aaronhall.dev</a> is down!'
+    ''; # TODO wayland notification not parsing html anchor tag
+    startAt = "minutely"; # this makes a timer similar to below commented one:
+  };*/
   ## TODO - is this working? webcam microphone isn't showing as source in wpctl status
   ## but still have integrated camera listed as a source...
   ## see https://www.reactivated.net/writing_udev_rules.html:
@@ -139,7 +166,7 @@ in
 
   #### User and Environment Setup
   environment.shellAliases = {
-    start_sway = "exec sway";
+    start_sway = "cd && exec sway";
     list_sway_get_outputs = "swaymsg -t get_outputs";
     ssh = "kitty +kitten ssh"; # documented in kitty docs
     restart_pipewire = "systemctl --user restart pipewire";
@@ -245,10 +272,10 @@ in
     fstl # fast stl viewer (gui program, 3d printing files)
     k4dirstat
   ];
-  nixpkgs.overlays = with pkgs; [
-    (self: super: {
+  nixpkgs.overlays = [ #with pkgs; [ # trying getting ffmpeg-full from self instead.
+    (self: super: { # this could also be: (final: prev: {
       mpv-unwrapped = super.mpv-unwrapped.override {
-        ffmpeg = ffmpeg-full;
+        ffmpeg = self.ffmpeg-full;
       };
     })
     /*(self: super: { # avoid error when trying to view youtube videos?

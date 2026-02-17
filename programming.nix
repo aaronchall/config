@@ -10,6 +10,7 @@
           projectile # project management?
           neotree
           ob-rust # org-babel
+          rust-mode
           ob-elm
           org # let's see if this satisfies the req's of ob-elm, company-org-block, and ox-reveal?
           elm-mode
@@ -142,6 +143,7 @@
     rustc
     cargo
     rustfmt
+    rust-script
     #### Node and Javascript:
     nodejs
     deno

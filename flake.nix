@@ -39,6 +39,8 @@
                 package = pkgs.unstable.ollama;
                 loadModels = [ # Size, Context
                   "mistral" # 4.4 GB, 32K
+                  "nemotron-3-nano" # 24 GB, 1M
+                  "huihui_ai/gpt-oss-abliterated" # 14 GB, 128K
                   #"smollm2" # 1.8 GB, 8K
                   #"granite" # 2.1 GB, 128K
                   #"granite4:350m-h" # 366 MB, 1M

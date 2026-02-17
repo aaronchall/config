@@ -61,6 +61,7 @@ in
     (org-babel-do-load-languages
      'org-babel-load-languages
      '((emacs-lisp . t)
+       (rust . t)
        (R . t)
        (python . t)
        (shell . t)
@@ -73,6 +74,7 @@ in
        (haskell . t)
       )
     )
+    (with-eval-after-load 'ob-rust (setq org-babel-rust-command "rustc")) ;; babel trying to use rust-script, which I don't want.
     (evil-set-undo-system 'undo-redo) ;; XXX XXX will this work?
     ;;(require 'powerline) ;; see https://www.youtube.com/watch?v=kAA37BR2B1Y 26:00ish for moar...
     (add-hook 'after-init-hook 'global-company-mode)
@@ -121,7 +123,7 @@ in
      '(package-selected-packages 'nil) ;; using NixOS to manage emacs packages
     )
     (custom-set-faces
-     )
+    )
     ;;(set-default-coding-systems 'utf-8);; isn't this default? C-h shift-C indicates it is.
     ;;update appearance:
     ;;(set-frame-parameter nil 'background-color "#000000")
@@ -130,7 +132,7 @@ in
     (add-to-list 'default-frame-alist '(alpha-background . 70))
     (add-to-list 'default-frame-alist '(font . "Fira Code")) ;; better than default
     (set-face-background 'default "#000000")
-    '';
+  '';
   home.file.".ssh/config".text = /* ssh_config */''
     Host cs-ssh cs
         Hostname cs-ssh.uwf.edu
