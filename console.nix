@@ -1,85 +1,35 @@
 {pkgs, lib, ...}:
-let 
-  colors = import ./colors.nix; # reused in multiple locations
-  networks = import ./networks.nix; # hide secrets when demoing
+let
+  colors = import ./colors.nix; # for terminal and neovim, and kitty in gui.nix
 in {
-  nixpkgs.config.allowBroken = true;
+  # nixpkgs.config.allowBroken = true;
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  #boot.kernelPackages = pkgs.linuxPackages_6_7;
   # TODO switch back later:
-  #boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
   # below won't boot :(
-  #boot.kernelPackages = pkgs.linuxPackages-rt_latest;
-  # why do these feel redundant?
+  #boot.kernelPackages = pkgs.linuxPackages-rt_latest; # real-time kernel
+
+  # provides faster swap performance by compressing data in RAM rather than 
+  # writing it to a disk, effectively increasing available memory without 
+  # slow disk I/O. Really good for low memory systems.
   #zramSwap = {
   #  enable = true;
   #  memoryPercent = 25;
   #};
-  # see /etc/resolv.conf   [ cloudflare DNS     ,     Google DNS     ]
-  networking.nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4" ];
-  # see networks.nix for wifi network configuration:
-  # can I get this in my hardware-configuration.nix?
-  /*networking.wireless.interfaces = [ "wlp0s20f3" 
-                                     #"wlp3s0" 
-    ]; # must tweak for multiple laptop installs (grep for wlp)
-  */
-  #networking.useNetworkd = true;
-  networking.wireless = {
-    enable = true; # Enables wpa_supplicant.
-    /*iwd = { # use iwctl, 
-      enable = false;
-      settings = {
-        IPv6.Enabled = true;
-        Settings.AutoConnect = true;
-      };
-    };*/
-    networks = networks;
-    userControlled = { # wpa_cli
-      enable = true;
-      group = "wheel";
-    };
-    allowAuxiliaryImperativeNetworks = true; # allow both static and dynamic e.g. wpa_supplicant_gui
-  };
-  /*networking.extraHosts = ''
-    # Productivity Blacklist
-    127.0.0.1    old.reddit.com
-    127.0.0.1    www.reddit.com
-    127.0.0.1    reddit.com
-    127.0.0.1    www.facebook.com
-    127.0.0.1    facebook.com
-    127.0.0.1    www.twitter.com
-    127.0.0.1    twitter.com
-    127.0.0.1    www.x.com
-    127.0.0.1    x.com
-    127.0.0.1    www.linkedin.com
-    127.0.0.1    linkedin.com
-    127.0.0.1    www.youtube.com
-    127.0.0.1    youtube.com
-    127.0.0.1    i.ytimg.com
-    127.0.0.1    i9.ytimg.com
-    127.0.0.1    yt3.ggpht.com
-    127.0.0.1    www.4chan.org
-    127.0.0.1    4chan.org
-    127.0.0.1    boards.4chan.org
-    127.0.0.1    news.ycombinator.com
-    127.0.0.1    ycombinator.com
-    127.0.0.1    www.discord.com
-    127.0.0.1    discord.com
-    127.0.0.1    www.discord.gg
-    127.0.0.1    discord.gg
-    127.0.0.1    discordapp.com
-    127.0.0.1    www.discordapp.com
-    127.0.0.1    discordapp.net
-    127.0.0.1    www.discordapp.net
-    # can run `systemctl status nscd.service` to restart, but happens automatically on switching.
-  '';*/
-  services.acpid.enable = true; # maybe need: services.acpid.acEventCommands -> ""
-  # services.gvfs.enable = true; # use android devices MTP, dolphin apparently doesn't use?
-  time.timeZone = "US/Eastern";
 
-  networking.useDHCP = false; ## this is default on all of my systems.
+  # Below daemon handles power-related events like lid switches or button presses.
+  # You can define specific handlers for ACPI events, for instance handling AC adapter status changes.
+  services.acpid.enable = true; # maybe need: services.acpid.acEventCommands -> ""
+  services.lldpd.enable = true;
+  services.lldpd.extraArgs= ["-d"];
+
+  # services.gvfs.enable = true; # use android devices MTP, dolphin apparently doesn't use?
+  time.timeZone = "US/Eastern"; # TODO move to x1.nix
+
+  # this is default behavior, but enabled for most network interfaces individually
+  networking.useDHCP = false;
 
   i18n.defaultLocale = "en_US.UTF-8";
   console = { # sets /etc/vconsole.conf
@@ -134,13 +84,13 @@ in {
         # nothing added yet...
       ];
     };
-    /*neovim = {
+    /*neovim = { # We could nest neovim config here, but instead, just below:
       enable = true;
       vimAlias = true;... 
     }*/
   };
 
-  programs.neovim = { # use neovim for lsp support
+  programs.neovim = { # I switched from vim to neovim for lsp and *treesitter*:
     enable = true;
     vimAlias = true;
     viAlias = true;
@@ -167,22 +117,23 @@ in {
         set backspace=indent,eol,start
         let g:elm_format_autosave = 1
         " https://shapeshed.com/vim-netrw/autoformattr
-        let g:netrw_banner=0
-        let g:netrw_liststyle=3
-        let g:netrw_browse_split=4
-        let g:netrw_altv=1
-        let g:netrw_winsize=25
-        augroup ProjectDrawer
-          autocmd!
-          autocmd VimEnter * :Vexplore
-        augroup END
+        " let g:netrw_banner=0
+        " let g:netrw_liststyle=3
+        " let g:netrw_browse_split=4
+        " let g:netrw_altv=1
+        " let g:netrw_winsize=25
+        """" Vexplore launches when opening a file.
+        " augroup ProjectDrawer
+        "   autocmd!
+        "   autocmd VimEnter * :Vexplore
+        " augroup END
         " :Diff to see diff on current versus saved:
         command! -nargs=0 Diff w !diff % -
         " below works but commented to test - add python config later?
         " lua vim.lsp.config['pyright'] = {}
         lua vim.lsp.enable('pyright')
         lua << EOF
-        require('nvim-treesitter.configs').setup{
+        require('nvim-treesitter.config').setup{
             highlight = {enable = true,},
             incremental_selection = {
                 enable = true,
@@ -193,8 +144,37 @@ in {
                 },
             },
         }
+        -- Use my ANSI colors
+        vim.g.terminal_color_0  = "#${colors.black}"
+        vim.g.terminal_color_1  = "#${colors.red}"
+        vim.g.terminal_color_2  = "#${colors.green}"
+        vim.g.terminal_color_3  = "#${colors.yellow}"
+        vim.g.terminal_color_4  = "#${colors.blue}"
+        vim.g.terminal_color_5  = "#${colors.magenta}"
+        vim.g.terminal_color_6  = "#${colors.cyan}"
+        vim.g.terminal_color_7  = "#${colors.white}"
+        vim.g.terminal_color_8  = "#${colors.brightblack}"
+        vim.g.terminal_color_9  = "#${colors.brightred}"
+        vim.g.terminal_color_10 = "#${colors.brightgreen}"
+        vim.g.terminal_color_11 = "#${colors.brightyellow}"
+        vim.g.terminal_color_12 = "#${colors.brightblue}"
+        vim.g.terminal_color_13 = "#${colors.brightmagenta}"
+        vim.g.terminal_color_14 = "#${colors.brightcyan}"
+        vim.g.terminal_color_15 = "#${colors.brightwhite}"
+        vim.opt.termguicolors = true
+        -- Force main windows and status line to use your true black and gray
+        local custom_palette = {
+          Normal       = { fg = "#${colors.white}", bg = "#${colors.black}" },
+          SignColumn   = { bg = "#${colors.black}" },
+          LineNr       = { fg = "#${colors.brightblack}", bg = "#${colors.black}" },
+          StatusLine   = { fg = "#${colors.brightblack}", bg = "#${colors.black}" },
+        }
+        for group, options in pairs(custom_palette) do
+          vim.api.nvim_set_hl(0, group, options)
+        end
+        vim.api.nvim_set_hl(0, "@keyword", { fg = "#${colors.cyan}" })
         EOF
-        hi Normal guibg=black
+        "hi Normal guibg=black
       '';
       packages.myVimPackage = with pkgs.vimPlugins; {
         start = [
@@ -216,6 +196,7 @@ in {
       "video" # I don't remember why? from hacks for screensharing?
       "audio" # IDK if actually needed?
       "libvirtd" # to manage virtual machines
+      "networkmanager" # temporary while using nm-applet
     ];
   };
   users.motd = ''
@@ -238,6 +219,7 @@ in {
     settings = {
       auto-optimise-store = true; # saves tons of space, note "s" spelling.
       experimental-features = [ "nix-command" "flakes" ];
+      #substituters = [ "https://hydra.nixos.org/" ];
     };
   };
   # Bash config:
@@ -386,8 +368,10 @@ in {
   networking.firewall.allowedUDPPorts = [ ];
 
   # virtualisation.docker.enable = true;
-  virtualisation.podman.enable = true;
-
+  #virtualisation.podman.enable = true;
+  virtualisation.podman = {
+    enable = true;
+  };
   nixpkgs.config.allowUnfree = true;
   environment.shellAliases = {
     ssh_idea = "ssh idea.local";
@@ -418,21 +402,22 @@ in {
     lm_sensors # required by temperature block for i3status-rs
     dmidecode # determine memory configuration
     smartmontools # SMART disk health
-    neofetch # see my system details
     fastfetch # Better than neofetch
     lsof # list open files
-    ecryptfs # Enterprise-class stacked cryptographic filesystem
+    #ecryptfs # removed, need replacement? Enterprise-class stacked cryptographic filesystem
+    age # age-keygen to generate keys for SOPS
     pstree # Show the set of running processes as a tree
     coreutils # fileutils, shellutils and textutils (ls, sort, head) https://www.gnu.org/software/coreutils/
     pciutils # lspci
     hwinfo # hardware info
     lshw # list hardware
     usbutils # lsusb
+    tcpdump
     bind # "Domain name server" for nslookup
     file # info on files
-    bat # better cat
+    bat # better cat, line numbers - short files -> stdout, large files -> pager (less)
     eza # ls improvement, written in rust
-    bottom # btm - written in rust, doesn't seem to crash like btop does.
+    bottom # btm - written in rust, doesn't crash when low system resources like btop does.
     tmux # terminal multiplexer # see zelij
     rustscan # scan ports fast https://rustscan.github.io/RustScan/
     nmap # rustscan requires this. So why doesn't it *require* it so I don't have to list this then?
@@ -455,6 +440,6 @@ in {
     unzip
     p7zip
     cowsay
-    odoo
+    #odoo # not available anymore?
   ];
 }

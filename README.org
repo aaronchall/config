@@ -36,9 +36,8 @@ Be sure to commit new files so flake can see them.
     - gui.nix - everything I would want on any gui machine, browsers, editors, etc.
       - colors.nix - actually gave [[https://github.com/kovidgoyal/kitty-themes/pull/98][a pull request with these to kitty]]
     - home.nix - home-manager, dotfile kind of stuff,
-      some things are just better handled by home-manager anyways.
-      - home console - not broken down into these... yet.
-      - home gui - not broken down into...
+      some things are just better handled by home-manager anyways like obs w/ packages
+    - secrets.yaml has all secrets encrypted
   - idea - my wife's laptop, a Lenovo Ideapad Pro 5
     - console.nix - same file as above, for reuse!
     - nat.nix - everything specific to the ideapad!

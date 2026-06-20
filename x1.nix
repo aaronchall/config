@@ -2,6 +2,7 @@
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
     ./printhpdj2700.nix
+    #./ # what? why?
   ];
   boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
@@ -23,6 +24,14 @@
   #TODO review, CPU always low, maybe I can get better perf when plugged in?
   powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      intel-media-driver # modern iHD driver for Iris Xe
+      vpl-gpu-rt         # Successor to Intel Media SDK for newer GPUs
+      libvdpau-va-gl
+    ];
+  };
   #networking.interfaces.enp0s31f6.useDHCP = true; # old laptop
   networking.interfaces.wlan0.useDHCP = true;
   #networking.interfaces.wlp0s20f3.useDHCP = true;
@@ -32,9 +41,69 @@
     "wlan0"
   ];
   networking.usePredictableInterfaceNames = false;
+  networking.enableIPv6 = false;
+  # protonvpn
+  sops.secrets.proton_wireguard_key = { # private proton key
+    # path = /run/secrets/proton_wireguard_key
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+  #/*
+  networking.wg-quick.interfaces.wg0 = {
+    autostart = true;
+    #mtu = 1280; # smallest allowed for ipv6 - disabled for now to try smaller.
+    #mtu = 1100; # let's try the default and not set this.
+    # Reference the decrypted path provided by sops-nix
+    privateKeyFile = config.sops.secrets.proton_wireguard_key.path;
+    address = [ # MY address:
+      "10.2.0.2/32"
+      #"2a07:b944::2:2/128"
+    ]; # Use the IP from your Proton config
+    dns = [ 
+      "10.2.0.1"
+      #"2a07:b944::2:1"
+    ];
+    peers = [
+      { # CH-1176
+        publicKey = "m0HsRUbWzTEDSNH9BVrsnGaA9mGaHfQlLDD2ngzgJmc=";
+        allowedIPs = [
+          "0.0.0.0/0"
+          #"::/0"
+        ];
+        endpoint = "37.120.137.226:51820";
+        persistentKeepalive = 25;
+      }
+    ];
+    postUp = ''
+      ${pkgs.systemd}/bin/resolvectl dns wg0 10.2.0.1
+      ${pkgs.systemd}/bin/resolvectl domain wg0 "~."
+    '';
+  };
+  # Optional: auto-start on boot - but see option above?
+  #systemd.services."wg-quick-wg-proton".wantedBy = [ "multi-user.target" ];
+  environment.systemPackages = with pkgs; [
+    #protonvpn-gui
+    wireguard-tools
+    tcpdump
+    #transmission_4-qt
+    rustmission
+  ];
+  #/*
+  services.transmission = {
+    enable = true;
+    package = pkgs.transmission_4;
+    settings = {
+      download-dir = "/var/lib/transmission/Downloads";
+      rpc-bind-address = "0.0.0.0"; # Allows remote access
+      rpc-whitelist = "127.0.0.1,192.168.1.*"; # Restrict access to your local network
+    };
+  };#*/
+  #*/
+  services.resolved.enable = true;
+  #networking.firewall.checkReversePath = false;
 
-  programs.light.enable = true;
-  #hardware.acpilight.enable = true; # TODO still desirable?
+  hardware.acpilight.enable = true; # TODO still desirable?
   services.actkbd = {
     enable = true;
     bindings = [
@@ -47,10 +116,11 @@
       # mute toggle microphone
       { keys = [ 190 ]; events = [ "key" ]; command = "${pkgs.alsa-utils}/bin/amixer -q set Capture toggle"; }
       # screen backlight, darker, brighter respectively:
-      { keys = [ 224 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -U 10"; }
-      { keys = [ 225 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -A 10"; }
+      { keys = [ 224 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/brightnessctl set 10%-"; }
+      { keys = [ 225 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/brightnessctl set +10%"; }
     ];
   };
+  #services.ntp.enable = true;
   # TODO consider factoring out to sitecheck.nix file?
   #### systemd Services/Jobs
   # example here: https://discourse.nixos.org/t/syncthing-systemd-user-service/11199/6

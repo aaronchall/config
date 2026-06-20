@@ -11,7 +11,8 @@
     nssmdns4 = true;
     openFirewall = true;
   };
-  hardware.printers = {
+  # we shouldn't fail to build just because this isn't on the network:
+  /*hardware.printers = {
     ensurePrinters = [
       { # discovered with lpinfo -v and similar to lpadmin command:
         name = "HPDeskJet2700";
@@ -24,5 +25,5 @@
         };
       }
     ];
-  };
+  };*/
 }

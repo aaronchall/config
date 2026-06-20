@@ -3,11 +3,7 @@ let
   colors = import ./colors.nix;
 in
 {
-  #imports = [ 
-    # don't want screensharing hacks on right now:
-    #./screensharing-hacks.nix
-  #];
-  # TODO re-enable for screensharing
+  # screensharing over fake webcam (created by OBS):
   boot.kernelModules = [ "v4l2loopback" ];
   boot.extraModulePackages = with config.boot.kernelPackages; [
     v4l2loopback
@@ -15,6 +11,7 @@ in
   boot.extraModprobeConfig = ''
     options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
   '';
+
   # avoid complete system freeze when memory runs out:
   # services.earlyoom = {
   #   enable = false; # this is just killing my UI
@@ -32,20 +29,45 @@ in
   #services.mako = {
   #  enable = true;
   #};
-
-
-  programs.virt-manager.enable = true;
-  programs.sway.enable = true;
-  programs.chromium = {
-    enable = true; # chromium policies, not install...
-    extensions = [ # list of plugin IDs.
-      # see ID in url of extensions on chrome web store page
-      "cjpalhdlnbpafiamejdnhcphjbkeiagm" # ublock origin
-      "dhdgffkkebhmkfjojejmpbldmpobfkfo" # tampermonkey
-      "clngdbkpkpeebahjckkjfobafhncgmne" # stylus
-    ];
+  programs = {
+    virt-manager.enable = true;
+    sway.enable = true;
+    firefox = {
+      enable = true;
+      policies = {
+        ExtensionSettings = {
+          "uBlock0@raymondhill.net" = {
+            installation_mode = "force_installed";
+            install_url = "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi";
+          };
+          # Save to Zotero (Zotero Connector)
+          "zotero@chnm.gmu.edu" = {
+            installation_mode = "force_installed";
+            install_url = "https://www.zotero.org/download/connector/dl?browser=firefox";
+          };
+          # Better Canvas - need to check this from time to time?
+            "\{8927f234-4dd9-48b1-bf76-44a9e153eee0\}" = {
+            installation_mode = "force_installed";
+            install_url = "https://mozilla.org";
+          };
+          # Dark Reader
+          "addon@darkreader.org" = {
+            installation_mode = "force_installed";
+            install_url = "https://mozilla.org";
+          };
+        };
+      };
+    };
+    chromium = {
+      enable = true; # chromium policies, not install...
+      extensions = [ # list of plugin IDs.
+        # see ID in url of extensions on chrome web store page
+        "cjpalhdlnbpafiamejdnhcphjbkeiagm" # ublock origin
+        "dhdgffkkebhmkfjojejmpbldmpobfkfo" # tampermonkey
+        "clngdbkpkpeebahjckkjfobafhncgmne" # stylus
+      ];
+    };
   };
-
 # Review below again and delete: 
 # https://raw.githubusercontent.com/greshake/i3status-rust/master/examples/config.toml
 # https://man.archlinux.org/man/community/i3status-rust/i3status-rs.1.en
@@ -66,7 +88,7 @@ in
 
     [[block]]
     block = "net"
-    device = "wlp0s20f3"
+    device = "wlan0"
     format = "$icon $speed_down $graph_down $speed_up $graph_up $signal_strength $frequency"
     format_alt = "$icon $ssid $frequency $signal_strength $bitrate ip $ipv6"
 
@@ -184,6 +206,8 @@ in
   };
   environment.systemPackages = with pkgs; [
     (rstudioWrapper.override { packages = import ./RPackages.nix {inherit pkgs; }; })
+    vesktop
+    webcord
     wl-mirror # mirror output on laptop, TODO hotkey in config `wl-mirror <srcoutput> <destoutput>`
     # Speech to text:
     stt
@@ -228,7 +252,8 @@ in
     i3status-rust # status bar for sway!
     kdePackages.kdenlive # video editing/processing GUI
     ffmpeg-full # video processing on command line
-    helvum # manages wireplumber (pipewire name of app to launch in sway
+    #helvum # manages wireplumber, removed due to vulnerable requirement
+    crosspipe # suggested as helvum's replacement
     #pw-viz # another wireplubmer/pipewire manager - build fails
     qpwgraph # PipeWire Graph Qt GUI https://gitlab.freedesktop.org/rncbc/qpwgraph
     easyeffects # why do I need easyeffects? Don't think I do?
@@ -256,7 +281,7 @@ in
     dwarf-fortress # Sim-City meets rogue
     pioneer # space adventure game set in the Milky Way galaxy at the turn of the 31st century
     mame # arcade emulator
-    snes9x-gtk # SNES emulators
+    #snes9x-gtk # SNES emulators
     zsnes
     # End of games - probably should move to another module.
     kitty # selected for ligatures for example: => is an arrow in kitty.
@@ -268,9 +293,10 @@ in
     libwacom
     #fbreader
     chromium # (not redundant to enable policies)
-    firefox
+    #firefox
     fstl # fast stl viewer (gui program, 3d printing files)
-    k4dirstat
+    qdirstat
+    scribus
   ];
   nixpkgs.overlays = [ #with pkgs; [ # trying getting ffmpeg-full from self instead.
     (self: super: { # this could also be: (final: prev: {
@@ -299,7 +325,7 @@ in
     fira-code-symbols
   ];
   # why I have kitty - that is, ligatures:
-  # -> --> => ==> . .. ... /== //= /= != == !=
+  # -> --> => ==> . .. ... /== //= /= == !=
   # this is defined in-line because the syntax is very simple
   # not much to be gained from splitting to different file
   # https://sw.kovidgoyal.net/kitty/conf/ (`#` as first character is comment)

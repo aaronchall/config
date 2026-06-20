@@ -44,36 +44,13 @@
       )
     ));
   };
-  environment.systemPackages = with pkgs; [
-    ## Programming languages and related utils
-    gnumake
-    entr # run commands when files change, ie: ls . | entr python -m main
-    rlwrap # readline wrap?
-    sbcl # Steel Bank Common Lisp (Cargegie Mellon)
-    jdk21 # Java 21
-    #android-studio-full
-    #qemu-utils
-    # jdk17
-    #### C/C++ programming:
-    valgrind
-    #gcc # conflicts with clang, I prefer clang error messages
-    gdb
-    openmpi # not sure if this works with clang
-    clang # conflicts with gcc...
-    #### Oracle:
-    oracle-instantclient
-    #### Scala:
-    spark
-    sbt
-    #hadoop # I think this is provided by spark because collisions
-    #### Markdown and document processing:
-    pandoc # written in Haskell, maybe this should be in console.nix?
-    #### R command line environment, RPackages.nix because RStudio in gui.nix
-    (rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
-    #### Python:
-    uv # replace pip and package your python stuff better?
-    pyright # Python linting tools, uses nodejs, probably why here and not below.
-    (python3.withPackages (ps: with ps; [
+  environment.systemPackages = let
+    # aborted overide of haskell package versions to upgrade quarto's pandoc:
+    myHaskellPackages = pkgs.haskellPackages.extend ( self: super: {
+    });
+    # need these for reuse by patchedQuarto:
+    myRPackages = import ./RPackages.nix {inherit pkgs; };
+    myPythonPackages = ps: with ps; [
       ollama # python lib to interface with ollama
       #stem # tor
       python-sat # commented to demo
@@ -95,7 +72,7 @@
 #      coverage
 #      cython
 #      wheel
-      jupyterlab
+       jupyterlab
 #      flax
 #      pyspark
 #      networkx
@@ -110,15 +87,60 @@
       statsmodels
       ipython
       scikit-learn
-#      sympy
+      sympy
+      #reticulate # doesn't exist
 #    #tornado
 #    #   flask
 #    #   django
 #    #   pympler
 #    #   pyqtgraph
-    ]))
+    ];
+    patchedQuarto = (pkgs.quarto.override {
+        extraPythonPackages = myPythonPackages;
+        extraRPackages = myRPackages;
+      }).overrideAttrs (oldAttrs: {
+      postPatch = (oldAttrs.postPatch or "") + ''
+        substituteInPlace bin/quarto.js \
+          --replace-fail "syntax-highlighting" "highlight-style"
+      '';
+    });
+  in with pkgs; [
+    pandoc
+    ## Programming languages and related utils
+    gnumake
+    entr # run commands when files change, ie: ls . | entr python -m main
+    rlwrap # readline wrap?
+    sbcl # Steel Bank Common Lisp (Cargegie Mellon)
+    jdk21 # Java 21
+    #android-studio-full
+    #qemu-utils
+    # jdk17
+    #### C/C++ programming:
+    valgrind
+    #gcc # conflicts with clang, I prefer clang error messages
+    gdb
+    openmpi # not sure if this works with clang
+    clang # conflicts with gcc...
+    #### Oracle:
+    oracle-instantclient
+    #### Scala:
+    spark
+    sbt
+    #hadoop # I think this is provided by spark because collisions
+
+    #### Markdown and document processing:
+    # dupe pandoc # written in Haskell, maybe this should be in console.nix?
+    #### R command line environment, RPackages.nix because RStudio in gui.nix
+    ##(rWrapper.override {packages = import ./RPackages.nix {inherit pkgs; }; })
+    (rWrapper.override {packages = myRPackages ; })
+    ##### Python:
+    (python3.withPackages myPythonPackages)
+    ## next generation of Rmarkdown for Python, Julia, R, and JS:
+    patchedQuarto
+    uv # replace pip and package your python stuff better?
+    pyright # Python linting tools, uses nodejs, probably why here and not below.
     #### Haskell
-    (haskellPackages.ghcWithPackages (pkgs: with pkgs; [
+    (myHaskellPackages.ghcWithPackages (pkgs: with pkgs; [
       cabal-install
       lens
       yesod-bin
@@ -126,7 +148,7 @@
 #      # intero # marked broken
       hlint        # req'd by haskell layer
       hspec
-      pandoc
+      #pandoc
 #      apply-refact # req'd
       stylish-haskell # marked broken
       hasktags
@@ -147,16 +169,9 @@
     #### Node and Javascript:
     nodejs
     deno
-  ] ++ (with nodePackages; [
-    npm
     typescript
     typescript-language-server
-    #ts-node # removed, support now built into node?
-    #create-next-app
-    #react-tools
-    #yarn # TODO - do I need this for hadoop or does hadoop supply its own?
-    #### Elm:
-  ]) ++ (with elmPackages; [
+  ] ++ (with elmPackages; [
     elm
     #elm-format
     elm-analyse # lint?
@@ -169,6 +184,8 @@
   ]) ++ [
     # do I need these?: 
     kubectl # kubernetes 
+    kind # use docker containers for CI and testing?
+    kubernetes-helm # scale kubernetes deployments?
     #docker # why?
     podman-desktop # replaces docker (why ?) do I need this in addition to enable above?
     openshift

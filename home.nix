@@ -161,6 +161,11 @@ in
         IdentityFile ~/.ssh/id_ed25519
         User excelsiora
     
+    Host homelab
+        Hostname 192.168.12.157
+        IdentityFile ~/.ssh/id_ed25519
+        User aaron
+
     Host *
         IdentitiesOnly yes
         VisualHostKey=yes
@@ -195,7 +200,14 @@ in
     gaps inner 5
     smart_gaps on
     # super-c screenshots, puts png in ~/Pictures
-    bindsym $mod+c exec grim  -g "$(slurp)" ~/Pictures/$(date -Iseconds).png
+    bindsym $mod+c exec grim -g "$(slurp)" ~/Pictures/$(date -Iseconds).png
+
+    # Kill programs - e.g. if out of memory...
+    bindsym $mod+Control+Shift+F exec pkill firefox
+    bindsym $mod+Control+Shift+C exec pkill chromium
+    bindsym $mod+Control+Shift+K exec pkill kitty
+    bindsym $mod+Control+Shift+O exec pkill ollama
+    
     
     ### Output configuration
     #
@@ -345,6 +357,7 @@ in
     
         # Toggle the current focus between tiling and floating mode (right shift?)
         bindsym $mod+Shift+space floating toggle
+        bindsym $mod+Shift_L+space floating toggle
     
         # Swap focus between the tiling area and the floating area
         bindsym $mod+space focus mode_toggle
@@ -414,5 +427,9 @@ in
     # from wiki:
     # exec dbus-sway-environment
     # exec configure-gtk
+    # commenting below because I don't use network manager! (?):
+    # exec nm-applet --indicator
+    # I believe below helps me share my screen - but it's already in /etc/sway/config.d/nixos.conf!!
+    #exec dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK
   '';
 }
