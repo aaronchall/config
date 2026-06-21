@@ -2,15 +2,6 @@
 let
   colors = import ./colors.nix; # for terminal and neovim, and kitty in gui.nix
 in {
-  # nixpkgs.config.allowBroken = true;
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  # TODO switch back later:
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-  # below won't boot :(
-  #boot.kernelPackages = pkgs.linuxPackages-rt_latest; # real-time kernel
-
   # provides faster swap performance by compressing data in RAM rather than 
   # writing it to a disk, effectively increasing available memory without 
   # slow disk I/O. Really good for low memory systems.
@@ -21,15 +12,14 @@ in {
 
   # Below daemon handles power-related events like lid switches or button presses.
   # You can define specific handlers for ACPI events, for instance handling AC adapter status changes.
-  services.acpid.enable = true; # maybe need: services.acpid.acEventCommands -> ""
-  services.lldpd.enable = true;
+  # services.acpid.enable = true; # run scripts on events? maybe need: services.acpid.acEventCommands -> "" - 
+
+  # broadcast on the server, make it easy to ssh into e.g. 
+  # ssh idea.local (double check this?):
+  services.lldpd.enable = lib.mkDefault true;
   services.lldpd.extraArgs= ["-d"];
 
   # services.gvfs.enable = true; # use android devices MTP, dolphin apparently doesn't use?
-  time.timeZone = "US/Eastern"; # TODO move to x1.nix
-
-  # this is default behavior, but enabled for most network interfaces individually
-  networking.useDHCP = false;
 
   i18n.defaultLocale = "en_US.UTF-8";
   console = { # sets /etc/vconsole.conf
@@ -44,46 +34,17 @@ in {
         brightmagenta brightcyan brightwhite ];
   };
 
-  # VM - grep for virt to find all relevant entries
-  virtualisation = {
-    libvirtd = {
-      enable = true;
-    };
-  };
-  #virtualisation = {
-    #qemu.drives = {
-    #  nixosvm = {
-    #    name = "nixosvm";
-    #    # the file image used for this drive
-    #    file = "nixos-minimal-23.11.4976.79baff8812a0-x86_64-linux.iso";
-    #    driveExtraOpts = {}; # extra options passed to drive flag
-    #    deviceExtraOpts = {}; # Extra options passed to device flag
-    #  };
-    #};
-   # virtualbox.host = {
-   #   enable = true;
-   #   enableExtensionPack = true;
-   # };
-   # libvirtd.enable = true;
-  #};
-
-  #users.extraGroups.bvoxusers.members = [ "aaron" ]; # ???
-  # virtualisation.libvirtd.enable = true;# sudo virsh net-start default
-  # users.users.user = { # for build-vm?
-  #   group = [ "wheel" ];
-  #   isSystemUser = true;
-  #   initialPassword = "pw";
-  # };
-
   programs = {
     mtr.enable = true; # my traceroute, combines ping with traceroute
     tmux.enable = true;
+    /*
     nix-ld = { # give FHS to Python compiled for other linuxes:
       enable = true;
       libraries = with pkgs; [
         # nothing added yet...
       ];
     };
+    */
     /*neovim = { # We could nest neovim config here, but instead, just below:
       enable = true;
       vimAlias = true;... 
@@ -204,7 +165,7 @@ in {
   '';
   environment.variables = {
     PROMPT_COMMAND = "history -a; history -n";
-    #EDITOR = "vim";
+    # EDITOR = "vim"; # stuff like this is handled in programs.neovim
     # use the terminal colors we are defining in colors.nix:
     BAT_THEME = "ansi"; 
     HISTSIZE = 10000;
@@ -213,8 +174,8 @@ in {
   nix = {
     gc = {
       automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 30d";
+      dates = "weekly"; # mkDefault: low priority default (mkForce higher)
+      options = lib.mkDefault "--delete-older-than 30d";
     };
     settings = {
       auto-optimise-store = true; # saves tons of space, note "s" spelling.
@@ -367,8 +328,6 @@ in {
   networking.firewall.allowedTCPPorts = [ ];
   networking.firewall.allowedUDPPorts = [ ];
 
-  # virtualisation.docker.enable = true;
-  #virtualisation.podman.enable = true;
   virtualisation.podman = {
     enable = true;
   };

@@ -1,14 +1,11 @@
 { config, lib, pkgs, modulesPath, ... }:
 
 {
+  system.stateVersion = "26.05";
   # hardware-configuration.nix stuff:
   imports =
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
-  boot.initrd.availableKernelModules = [ "ehci_pci" "ahci" "uhci_hcd" "hpsa" "usb_storage" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
-  boot.extraModulePackages = [ ];
   fileSystems."/" =
     { device = "rootpool/root";
       fsType = "zfs";
@@ -48,6 +45,7 @@
   swapDevices = [ ];
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+
   #### configuration.nix stuff: 
   nix = {
     settings = {
@@ -73,7 +71,13 @@
     initrd = {
       supportedFilesystems = ["zfs"];
       kernelModules = ["hpsa"];
-      availableKernelModules = ["hpsa" "sg" "sd_mod" ]; # controller is in HBA mode
+      availableKernelModules = [
+        "hpsa" "sg" "sd_mod" # controller is in HBA mode
+        "hpilo" # hp ilo interface kernel.
+        "ipmi_si"     # IPMI System Interface
+        "ipmi_devintf" # IPMI Device Interface
+        "ehci_pci" "ahci" "uhci_hcd" "usb_storage" ]
+      ;
     };
     #zfsSupport = true; #required if /boot is zfs, but might not support modern features.
     zfs.devNodes = "/dev/disk/by-id";
@@ -83,7 +87,8 @@
       "intremap=off"
       "systemd.setenv=SYSTEMD_SULOGIN_FORCE=1"
     ];
-    #boot.initrd.extraKernelModules = ["hpsa"];
+    kernelModules = [ "kvm-intel" ];
+    extraModulePackages = [ ];
   };
   networking = {
     hostName = "homelab";
@@ -94,25 +99,15 @@
   #services.zfs.trim.enable = true; only useful for SSDs.
   powerManagement.cpuFreqGovernor = "powersave";
 
-  # Configure network connections interactively with nmcli or nmtui.
-  #networking.networkmanager.enable = true;
-
   time.timeZone = "America/Chicago";
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  # Select internationalisation properties.
-  # i18n.defaultLocale = "en_US.UTF-8";
-  # console = {
-  #   font = "Lat2-Terminus16";
-  #   keyMap = "us";
-  #   useXkbConfig = true; # use xkb.options in tty.
-  # };
   documentation = {
-    enable = false;
-    nixos.enable = false;
-    man.enable = false;
+    enable = true;
+    nixos.enable = true;
+    man.enable = true;
   };
 
   services = {
@@ -127,45 +122,21 @@
       ];
     };
   };
-  # Enable the X11 windowing system.
-  # services.xserver.enable = true;
-
-
-
-
-  # Configure keymap in X11
-  # services.xserver.xkb.layout = "us";
-  # services.xserver.xkb.options = "eurosign:e,caps:escape";
-
-  # Enable CUPS to print documents.
-  # services.printing.enable = true;
-
-  # Enable sound.
-  # services.pulseaudio.enable = true;
-  # OR
-  # services.pipewire = {
+  # services.printing.enable = true; # CUPS - why?
+  # services.pipewire = { # audio - why?
   #   enable = true;
   #   pulse.enable = true;
   # };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.libinput.enable = true;
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users = {
-    root = {
-      hashedPassword = "$6$D9as3MJfsNImsGLa$nlBjGHk1coGS66iY7EVUYVuDupvWfikYCBhAUr79Mhuxy/M5W39/l4xQSuxoh1XZMCjwU.UR1VIlFb/lcJ/5Q1";
-    };
-    aaron = {
+    aaron = { # redundant to console.nix, but has packages - merge manually later?
       isNormalUser = true;
-      hashedPassword = "$6$D9as3MJfsNImsGLa$nlBjGHk1coGS66iY7EVUYVuDupvWfikYCBhAUr79Mhuxy/M5W39/l4xQSuxoh1XZMCjwU.UR1VIlFb/lcJ/5Q1";
       extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
       packages = with pkgs; [
         nix-output-monitor
         nh
         tree
         git
-        vim
         wget
         curl
         acpi # battery info, thermals, ac adapter
@@ -199,23 +170,14 @@
       ];
     };
   };
-  #users.users.root.hashedPassword = "$6$BWhc1sZlwbQCiS7B$2ydCryd.TpvzTB3TZOZCYL0uJCMvdHuXPYUyqCws850FiW4BCf8J5NiQODRmVyw6o7hzaA5YqBMqn/QsW8NT7.";
-  #users.users.root.hashedPassword = "!"; #Keep root locked for security.
-  environment.variables.EDITOR = "vim";
 
-  # programs.firefox.enable = true;
-
-  # List packages installed in system profile.
-  # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nanoeditor is also installed by default.
     wget
-    lm_sensors # inspect temps`
+    lm_sensors # inspect temps
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
-  # programs.mtr.enable = true;
   # programs.gnupg.agent = {
   #   enable = true;
   #   enableSSHSupport = true;
@@ -227,43 +189,18 @@
   # services.openssh.enable = true;
   services.openssh = {
     enable = true;
-    #settings.PermitRootLogin = "no";
+    settings.PermitRootLogin = "no";
     # PasswordAuthentication = false;
   };
 
-  # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 80 443 ];
-  networking.firewall.allowedUDPPorts = [ 53 ]; # why?
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  networking.firewall.allowedUDPPorts = [ 53 ]; # DNS
 
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  system.copySystemConfiguration = true;
   system.autoUpgrade = {
     enable = true;
     dates = "04:00"; # Run at 4 AM daily
     #flags = [ "--update-input" "nixpkgs" "--commit-lock-file" ];
   };
 
-  # This option defines the first version of NixOS you have installed on this particular machine,
-  # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
-  #
-  # Most users should NEVER change this value after the initial install, for any reason,
-  # even if you've upgraded your system to a new NixOS release.
-  #
-  # This value does NOT affect the Nixpkgs version your packages and OS are pulled from,
-  # so changing it will NOT upgrade your system - see https://nixos.org/manual/nixos/stable/#sec-upgrading for how
-  # to actually do that.
-  #
-  # This value being lower than the current NixOS release does NOT mean your system is
-  # out of date, out of support, or vulnerable.
-  #
-  # Do NOT change this value unless you have manually inspected all the changes it would make to your configuration,
-  # and migrated your data accordingly.
-  #
-  # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = "26.05"; # Did you read the comment?
 
 }

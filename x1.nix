@@ -4,12 +4,23 @@
     ./printhpdj2700.nix
     #./ # what? why?
   ];
-  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
-  boot.extraModulePackages = [ ];
-  #boot.loader.grub.gfxmodeBios = "1920x1080,auto";
-  boot.kernelParams = [ "video=eDP-1:1920x1080@60" ];
+  boot = {
+    kernelPackages = pkgs.linxuPackages_latest;
+    initrd = {
+      availableKernelModules = [ 
+        "xhci_pci" "thunderbolt" "nvme" "usb_storage" "sd_mod" 
+      ];
+      kernelModules = [ ];
+    };
+    kernelModules = [ "kvm-intel" ];
+    extraModulePackages = [ ];
+    # boot.loader.grub.gfxmodeBios = "1920x1080,auto";
+    kernelParams = [ "video=eDP-1:1920x1080@60" ];
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+  };
   fileSystems."/" = { 
     device = "/dev/disk/by-uuid/cf9a7695-02fa-4367-8ab1-a63521fe7c96";
     fsType = "ext4";
@@ -32,6 +43,9 @@
       libvdpau-va-gl
     ];
   };
+  time.timeZone = "US/Eastern";
+  # This should be default - but set on each applicable machine's .nix file.
+  networking.useDHCP = false; 
   #networking.interfaces.enp0s31f6.useDHCP = true; # old laptop
   networking.interfaces.wlan0.useDHCP = true;
   #networking.interfaces.wlp0s20f3.useDHCP = true;
