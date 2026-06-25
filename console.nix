@@ -354,7 +354,7 @@ in {
     ed # just for fun - it's the standard editor, duh
     #nano # Standard in NixOS - use the nano container to show off?
     nh # "nix helper" features for builds like trees etc
-    nix-output-monitor # same API as nix command, but better output???
+    nix-output-monitor # same API as nix command, but better output
     acpi # battery info, thermals, ac adapter
     #upower # D-Bus service for power management - run service insead
     batmon # terminal dashboard for power info

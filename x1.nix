@@ -63,7 +63,7 @@
     group = "root";
     mode = "0400";
   };
-  #/*
+  /*
   networking.wg-quick.interfaces.wg0 = {
     autostart = true;
     #mtu = 1280; # smallest allowed for ipv6 - disabled for now to try smaller.
@@ -112,8 +112,8 @@
       rpc-bind-address = "0.0.0.0"; # Allows remote access
       rpc-whitelist = "127.0.0.1,192.168.1.*"; # Restrict access to your local network
     };
-  };#*/
-  #*/
+  };#* /
+  */
   services.resolved.enable = true;
   #networking.firewall.checkReversePath = false;
 
